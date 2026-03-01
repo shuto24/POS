@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-primary text-white fw-bold">
+        <i class="bi bi-plus-circle"></i> 収支を追加
+      </div>
+      <div class="card-body">
+        <form method="post" id="addForm">
+          <!-- 種別 -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">種別</label>
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="type" id="typeIncome"
+                       value="income" checked onchange="updateCategories()">
+                <label class="form-check-label text-success fw-semibold" for="typeIncome">収入</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="type" id="typeExpense"
+                       value="expense" onchange="updateCategories()">
+                <label class="form-check-label text-danger fw-semibold" for="typeExpense">支出</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- 日付 -->
+          <div class="mb-3">
+            <label for="date" class="form-label fw-semibold">日付</label>
+            <input type="date" class="form-control" id="date" name="date" value="{{ today }}" required>
+          </div>
+
+          <!-- カテゴリ -->
+          <div class="mb-3">
+            <label for="category" class="form-label fw-semibold">カテゴリ</label>
+            <select class="form-select" id="category" name="category" required>
+              {% for c in income_categories %}
+                <option value="{{ c }}" data-type="income">{{ c }}</option>
+              {% endfor %}
+              {% for c in expense_categories %}
+                <option value="{{ c }}" data-type="expense" style="display:none">{{ c }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- 金額 -->
+          <div class="mb-3">
+            <label for="amount" class="form-label fw-semibold">金額（円）</label>
+            <div class="input-group">
+              <span class="input-group-text">¥</span>
+              <input type="number" class="form-control" id="amount" name="amount"
+                     min="1" placeholder="0" required>
+            </div>
+          </div>
+
+          <!-- メモ -->
+          <div class="mb-4">
+            <label for="memo" class="form-label fw-semibold">メモ <span class="text-muted fw-normal small">（任意）</span></label>
+            <input type="text" class="form-control" id="memo" name="memo" maxlength="100" placeholder="メモを入力">
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1">
+              <i class="bi bi-check-lg"></i> 登録
+            </button>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">キャンセル</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function updateCategories() {
+  const type = document.querySelector('input[name="type"]:checked').value;
+  const select = document.getElementById('category');
+  const options = select.querySelectorAll('option');
+  let first = true;
+  options.forEach(opt => {
+    const show = opt.dataset.type === type;
+    opt.style.display = show ? '' : 'none';
+    if (show && first) {
+      select.value = opt.value;
+      first = false;
+    }
+  });
+}
+</script>
+{% endblock %}

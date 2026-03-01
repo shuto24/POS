@@ -1,0 +1,22 @@
+body {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+}
+
+.navbar-brand {
+  font-size: 1.2rem;
+  letter-spacing: 0.03em;
+}
+
+.card {
+  border-radius: 0.75rem;
+}
+
+.table th {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.badge {
+  font-size: 0.75rem;
+}

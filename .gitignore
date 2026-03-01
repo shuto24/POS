@@ -1,0 +1,36 @@
+# データベース（個人データを含む）
+*.db
+*.sqlite
+*.sqlite3
+
+# 環境変数・シークレット
+.env
+.env.*
+secrets.py
+
+# Python キャッシュ
+__pycache__/
+*.py[cod]
+*.pyo
+
+# 仮想環境
+venv/
+.venv/
+env/
+.env/
+
+# パッケージビルド成果物
+*.egg-info/
+dist/
+build/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Flask セッション
+flask_session/
+instance/
