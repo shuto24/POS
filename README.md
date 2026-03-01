@@ -1,6 +1,7 @@
-# 家計簿アプリ
+# POS - Personal Operating System
 
-Flask + SQLite で作成したシンプルな家計簿 Web アプリです。
+個人の生活を管理する Web アプリです。
+現在は家計簿機能を実装しています。
 
 ## 機能
 
