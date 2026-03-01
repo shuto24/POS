@@ -37,6 +37,27 @@ def init_db():
                 amount INTEGER NOT NULL
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                is_preset INTEGER NOT NULL DEFAULT 0,
+                sort_order INTEGER NOT NULL DEFAULT 999,
+                UNIQUE(type, name)
+            )
+        """)
+        # プリセットカテゴリを初期投入（既存なら無視）
+        for i, name in enumerate(INCOME_CATEGORIES):
+            conn.execute(
+                "INSERT OR IGNORE INTO categories (type, name, is_preset, sort_order) VALUES (?,?,1,?)",
+                ("income", name, i),
+            )
+        for i, name in enumerate(EXPENSE_CATEGORIES):
+            conn.execute(
+                "INSERT OR IGNORE INTO categories (type, name, is_preset, sort_order) VALUES (?,?,1,?)",
+                ("expense", name, i),
+            )
 
 
 def add_transaction(date, type_, category, amount, memo=""):
@@ -204,6 +225,75 @@ def get_yearly_actual(year, type_, category):
             (str(year), type_, category),
         ).fetchone()
     return row["total"] or 0
+
+
+def get_categories(type_=None):
+    """カテゴリ名リストを sort_order 順で返す。type_ 指定時はその種別のみ。"""
+    with get_connection() as conn:
+        if type_:
+            rows = conn.execute(
+                "SELECT name FROM categories WHERE type=? ORDER BY sort_order, id",
+                (type_,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT type, name, is_preset FROM categories ORDER BY type, sort_order, id"
+            ).fetchall()
+    return [dict(row) for row in rows] if type_ is None else [row["name"] for row in rows]
+
+
+def add_category(type_, name):
+    """ユーザー追加カテゴリを登録する。既存の場合は何もしない。"""
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO categories (type, name, is_preset, sort_order) VALUES (?,?,0,999)",
+            (type_, name),
+        )
+
+
+def delete_category(type_, name):
+    """カスタムカテゴリを削除する。プリセットや取引が残っている場合は削除しない。
+    戻り値: 'ok' | 'preset' | 'has_transactions'
+    """
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT is_preset FROM categories WHERE type=? AND name=?", (type_, name)
+        ).fetchone()
+        if not row or row["is_preset"]:
+            return "preset"
+        count = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM transactions WHERE type=? AND category=?",
+            (type_, name),
+        ).fetchone()["cnt"]
+        if count > 0:
+            return "has_transactions"
+        conn.execute("DELETE FROM categories WHERE type=? AND name=?", (type_, name))
+    return "ok"
+
+
+def get_categories_detail(type_=None):
+    """管理ページ用: is_preset + 取引件数付きで全カテゴリを返す。"""
+    with get_connection() as conn:
+        if type_:
+            rows = conn.execute("""
+                SELECT c.type, c.name, c.is_preset,
+                       COUNT(t.id) AS tx_count
+                FROM categories c
+                LEFT JOIN transactions t ON t.type=c.type AND t.category=c.name
+                WHERE c.type=?
+                GROUP BY c.type, c.name, c.is_preset
+                ORDER BY c.sort_order, c.id
+            """, (type_,)).fetchall()
+        else:
+            rows = conn.execute("""
+                SELECT c.type, c.name, c.is_preset,
+                       COUNT(t.id) AS tx_count
+                FROM categories c
+                LEFT JOIN transactions t ON t.type=c.type AND t.category=c.name
+                GROUP BY c.type, c.name, c.is_preset
+                ORDER BY c.type, c.sort_order, c.id
+            """).fetchall()
+    return [dict(row) for row in rows]
 
 
 def get_available_months():

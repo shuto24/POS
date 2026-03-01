@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0 fw-bold"><i class="bi bi-tag"></i> カテゴリ管理</h4>
+</div>
+
+{% macro category_table(cats, section_type, label, color) %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-{{ color }} text-white fw-semibold">{{ label }}カテゴリ</div>
+  <div class="card-body p-0">
+    <table class="table mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>カテゴリ名</th>
+          <th>種別</th>
+          <th class="text-end">取引件数</th>
+          <th style="width:80px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cat in cats %}
+        <tr>
+          <td class="fw-semibold">{{ cat.name }}</td>
+          <td>
+            {% if cat.is_preset %}
+              <span class="badge bg-secondary">プリセット</span>
+            {% else %}
+              <span class="badge bg-info text-dark">カスタム</span>
+            {% endif %}
+          </td>
+          <td class="text-end text-muted small">{{ cat.tx_count }} 件</td>
+          <td class="text-end">
+            {% if not cat.is_preset %}
+              {% if cat.tx_count == 0 %}
+                <form method="post" action="{{ url_for('categories_delete') }}"
+                      onsubmit="return confirm('「{{ cat.name }}」を削除しますか？')">
+                  <input type="hidden" name="type" value="{{ section_type }}">
+                  <input type="hidden" name="name" value="{{ cat.name }}">
+                  <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              {% else %}
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2"
+                        disabled title="取引データがあるため削除できません">
+                  <i class="bi bi-trash"></i>
+                </button>
+              {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <!-- 追加フォーム -->
+  <div class="card-footer bg-white">
+    <form method="post" action="{{ url_for('categories_add') }}" class="d-flex gap-2 align-items-center">
+      <input type="hidden" name="type" value="{{ section_type }}">
+      <input type="text" name="name" class="form-control form-control-sm" style="width:200px"
+             placeholder="新しいカテゴリ名" maxlength="20" required>
+      <button type="submit" class="btn btn-sm btn-{{ color }}">
+        <i class="bi bi-plus"></i> 追加
+      </button>
+    </form>
+  </div>
+</div>
+{% endmacro %}
+
+{{ category_table(income_cats, 'income', '収入', 'success') }}
+{{ category_table(expense_cats, 'expense', '支出', 'danger') }}
+
+<div class="alert alert-light border small text-muted">
+  <i class="bi bi-info-circle"></i>
+  <strong>プリセット</strong>カテゴリは削除できません。
+  <strong>カスタム</strong>カテゴリは取引データがない場合のみ削除できます。
+</div>
+
+{% endblock %}

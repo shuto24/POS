@@ -52,8 +52,8 @@ def add():
     return render_template(
         "add.html",
         today=today,
-        income_categories=db.INCOME_CATEGORIES,
-        expense_categories=db.EXPENSE_CATEGORIES,
+        income_categories=db.get_categories("income"),
+        expense_categories=db.get_categories("expense"),
     )
 
 
@@ -91,8 +91,8 @@ def summary():
 
     # 年間サマリー（全カテゴリ）
     all_categories = {
-        "income": db.INCOME_CATEGORIES,
-        "expense": db.EXPENSE_CATEGORIES,
+        "income": db.get_categories("income"),
+        "expense": db.get_categories("expense"),
     }
     yearly_rows = {"income": [], "expense": []}
     for type_, cats in all_categories.items():
@@ -127,8 +127,8 @@ def budget():
         year=year,
         years=years,
         budgets=budgets,
-        income_categories=db.INCOME_CATEGORIES,
-        expense_categories=db.EXPENSE_CATEGORIES,
+        income_categories=db.get_categories("income"),
+        expense_categories=db.get_categories("expense"),
         months_list=months_list,
     )
 
@@ -160,6 +160,31 @@ def budget_delete():
     category = request.form["category"]
     db.delete_budget(year, type_, category)
     return redirect(url_for("budget", year=year))
+
+
+@app.route("/categories")
+def categories():
+    cats = db.get_categories_detail()
+    income_cats = [c for c in cats if c["type"] == "income"]
+    expense_cats = [c for c in cats if c["type"] == "expense"]
+    return render_template("categories.html", income_cats=income_cats, expense_cats=expense_cats)
+
+
+@app.route("/categories/add", methods=["POST"])
+def categories_add():
+    type_ = request.form["type"]
+    name = request.form["name"].strip()
+    if name:
+        db.add_category(type_, name)
+    return redirect(url_for("categories"))
+
+
+@app.route("/categories/delete", methods=["POST"])
+def categories_delete():
+    type_ = request.form["type"]
+    name = request.form["name"]
+    db.delete_category(type_, name)
+    return redirect(url_for("categories"))
 
 
 @app.route("/export")
