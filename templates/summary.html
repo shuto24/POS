@@ -52,6 +52,133 @@
   </div>
 </div>
 
+<!-- 月別 予算 vs 実績 -->
+{% macro budget_table(rows, type_label, color) %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-{{ color }} text-white fw-semibold">
+    {{ month }} {{ type_label }}予算 vs 実績
+  </div>
+  <div class="card-body p-0">
+    <table class="table mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>カテゴリ</th>
+          <th class="text-end">予算</th>
+          <th class="text-end">実績</th>
+          <th class="text-end">残り/超過</th>
+          <th style="min-width:160px">達成率</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% set has_budget = row.budget is not none %}
+        {% set diff = (row.budget - row.actual) if has_budget else none %}
+        {% set pct = [((row.actual / row.budget * 100) | int), 100] | min if has_budget and row.budget > 0 else 0 %}
+        {% set over = has_budget and row.actual > row.budget %}
+        <tr>
+          <td class="fw-semibold">{{ row.category }}</td>
+          <td class="text-end text-muted">
+            {% if has_budget %}¥{{ "{:,}".format(row.budget) }}{% else %}<span class="text-muted small">未設定</span>{% endif %}
+          </td>
+          <td class="text-end fw-semibold {{ 'text-success' if color == 'success' else 'text-danger' }}">
+            ¥{{ "{:,}".format(row.actual) }}
+          </td>
+          <td class="text-end fw-semibold">
+            {% if has_budget %}
+              {% if over %}
+                <span class="text-danger">-¥{{ "{:,}".format(row.actual - row.budget) }} <i class="bi bi-exclamation-triangle-fill"></i></span>
+              {% else %}
+                <span class="text-success">+¥{{ "{:,}".format(diff) }}</span>
+              {% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if has_budget and row.budget > 0 %}
+              {% set raw_pct = (row.actual / row.budget * 100) | int %}
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-grow-1" style="height:10px">
+                  <div class="progress-bar {{ 'bg-danger' if over else 'bg-' + color }}"
+                       style="width:{{ pct }}%"></div>
+                </div>
+                <small class="{{ 'text-danger fw-bold' if over else 'text-muted' }}">{{ raw_pct }}%</small>
+              </div>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endmacro %}
+
+{% if income_budget_rows %}{{ budget_table(income_budget_rows, '収入', 'success') }}{% endif %}
+{% if expense_budget_rows %}{{ budget_table(expense_budget_rows, '支出', 'danger') }}{% endif %}
+
+<!-- 年間サマリー -->
+{% if yearly_rows.income or yearly_rows.expense %}
+<h5 class="fw-bold mt-4 mb-3">{{ year }}年 年間予算 vs 実績</h5>
+
+{% for section_type, color, type_label in [('income','success','収入'), ('expense','danger','支出')] %}
+{% if yearly_rows[section_type] %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-{{ color }} text-white fw-semibold">{{ type_label }}（年間）</div>
+  <div class="card-body p-0">
+    <table class="table mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>カテゴリ</th>
+          <th class="text-end">年間予算</th>
+          <th class="text-end">年間実績</th>
+          <th class="text-end">残り/超過</th>
+          <th style="min-width:160px">達成率</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in yearly_rows[section_type] %}
+        {% set has_budget = row.budget is not none %}
+        {% set diff = (row.budget - row.actual) if has_budget else none %}
+        {% set pct = [((row.actual / row.budget * 100) | int), 100] | min if has_budget and row.budget > 0 else 0 %}
+        {% set over = has_budget and row.actual > row.budget %}
+        <tr>
+          <td class="fw-semibold">{{ row.category }}</td>
+          <td class="text-end text-muted">
+            {% if has_budget %}¥{{ "{:,}".format(row.budget) }}{% else %}<span class="text-muted small">未設定</span>{% endif %}
+          </td>
+          <td class="text-end fw-semibold {{ 'text-success' if color == 'success' else 'text-danger' }}">
+            ¥{{ "{:,}".format(row.actual) }}
+          </td>
+          <td class="text-end fw-semibold">
+            {% if has_budget %}
+              {% if over %}
+                <span class="text-danger">-¥{{ "{:,}".format(row.actual - row.budget) }} <i class="bi bi-exclamation-triangle-fill"></i></span>
+              {% else %}
+                <span class="text-success">+¥{{ "{:,}".format(diff) }}</span>
+              {% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if has_budget and row.budget > 0 %}
+              {% set raw_pct = (row.actual / row.budget * 100) | int %}
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-grow-1" style="height:10px">
+                  <div class="progress-bar {{ 'bg-danger' if over else 'bg-' + color }}"
+                       style="width:{{ pct }}%"></div>
+                </div>
+                <small class="{{ 'text-danger fw-bold' if over else 'text-muted' }}">{{ raw_pct }}%</small>
+              </div>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endif %}
+
 <!-- カテゴリ別明細テーブル -->
 <div class="row g-3">
   <div class="col-md-6">
@@ -121,10 +248,7 @@ new Chart(document.getElementById('incomeChart'), {
   type: 'doughnut',
   data: {
     labels: {{ income_cats.keys()|list|tojson }},
-    datasets: [{
-      data: {{ income_cats.values()|list|tojson }},
-      backgroundColor: COLORS,
-    }]
+    datasets: [{ data: {{ income_cats.values()|list|tojson }}, backgroundColor: COLORS }]
   },
   options: { plugins: { legend: { position: 'right' } } }
 });
@@ -135,10 +259,7 @@ new Chart(document.getElementById('expenseChart'), {
   type: 'doughnut',
   data: {
     labels: {{ expense_cats.keys()|list|tojson }},
-    datasets: [{
-      data: {{ expense_cats.values()|list|tojson }},
-      backgroundColor: COLORS,
-    }]
+    datasets: [{ data: {{ expense_cats.values()|list|tojson }}, backgroundColor: COLORS }]
   },
   options: { plugins: { legend: { position: 'right' } } }
 });
@@ -151,16 +272,8 @@ new Chart(document.getElementById('monthlyChart'), {
   data: {
     labels: monthlyData.map(d => d.month).reverse(),
     datasets: [
-      {
-        label: '収入',
-        data: monthlyData.map(d => d.income).reverse(),
-        backgroundColor: 'rgba(25,135,84,0.7)',
-      },
-      {
-        label: '支出',
-        data: monthlyData.map(d => d.expense).reverse(),
-        backgroundColor: 'rgba(220,53,69,0.7)',
-      }
+      { label: '収入', data: monthlyData.map(d => d.income).reverse(), backgroundColor: 'rgba(25,135,84,0.7)' },
+      { label: '支出', data: monthlyData.map(d => d.expense).reverse(), backgroundColor: 'rgba(220,53,69,0.7)' }
     ]
   },
   options: {

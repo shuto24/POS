@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0 fw-bold"><i class="bi bi-piggy-bank"></i> 予算設定</h4>
+  <form method="get" class="d-flex gap-2 align-items-center">
+    <select name="year" class="form-select form-select-sm" onchange="this.form.submit()" style="width:auto">
+      {% for y in years %}
+        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}年</option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+{% for section_type, categories, label, color in [
+    ('income', income_categories, '収入', 'success'),
+    ('expense', expense_categories, '支出', 'danger')
+] %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-{{ color }} text-white fw-semibold">{{ label }}カテゴリの予算</div>
+  <div class="card-body p-0">
+    <table class="table mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width:130px">カテゴリ</th>
+          <th>設定モード</th>
+          <th>金額</th>
+          <th style="width:80px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cat in categories %}
+          {% set key = (section_type, cat) %}
+          {% set current = budgets.get(key) %}
+          <tr>
+            <td class="fw-semibold">{{ cat }}</td>
+            <td colspan="2">
+              <form method="post" action="{{ url_for('budget_save') }}" class="budget-form">
+                <input type="hidden" name="year" value="{{ year }}">
+                <input type="hidden" name="type" value="{{ section_type }}">
+                <input type="hidden" name="category" value="{{ cat }}">
+
+                <div class="d-flex flex-wrap gap-2 align-items-start">
+                  <!-- モード選択 -->
+                  <div class="d-flex gap-3 align-items-center pt-1">
+                    {% for pt, pt_label in [('yearly','年のみ'), ('monthly_fixed','毎月固定'), ('monthly_variable','月ごと個別')] %}
+                    <div class="form-check form-check-inline mb-0">
+                      <input class="form-check-input period-radio"
+                             type="radio" name="period_type"
+                             id="pt_{{ section_type }}_{{ cat }}_{{ pt }}"
+                             value="{{ pt }}"
+                             data-cat="{{ section_type }}_{{ cat }}"
+                             {% if current and current.period_type == pt %}checked{% endif %}
+                             {% if not current and pt == 'monthly_fixed' %}checked{% endif %}>
+                      <label class="form-check-label small" for="pt_{{ section_type }}_{{ cat }}_{{ pt }}">{{ pt_label }}</label>
+                    </div>
+                    {% endfor %}
+                  </div>
+
+                  <!-- 単一金額入力（yearly / monthly_fixed） -->
+                  <div class="single-amount-wrap d-flex align-items-center gap-1
+                    {% if current and current.period_type == 'monthly_variable' %}d-none{% endif %}"
+                    id="single_{{ section_type }}_{{ cat }}">
+                    <span class="input-group-text small">¥</span>
+                    <input type="number" name="amount" class="form-control form-control-sm" style="width:130px"
+                           min="0" placeholder="0"
+                           value="{{ current.amount if current and current.period_type != 'monthly_variable' else '' }}">
+                    <button type="submit" class="btn btn-sm btn-primary">保存</button>
+                  </div>
+
+                  <!-- 月ごと個別入力 -->
+                  <div class="monthly-wrap
+                    {% if not current or current.period_type != 'monthly_variable' %}d-none{% endif %}"
+                    id="monthly_{{ section_type }}_{{ cat }}">
+                    <div class="row g-1 mt-1">
+                      {% for m in months_list %}
+                      <div class="col-auto">
+                        <label class="form-label small mb-0">{{ m[5:] }}月</label>
+                        <div class="input-group input-group-sm" style="width:110px">
+                          <span class="input-group-text">¥</span>
+                          <input type="number" name="amount_{{ m }}" class="form-control"
+                                 min="0" placeholder="0"
+                                 value="{{ current.month_amounts.get(m, '') if current and current.period_type == 'monthly_variable' else '' }}">
+                        </div>
+                      </div>
+                      {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary mt-2">保存</button>
+                  </div>
+                </div>
+              </form>
+            </td>
+            <td class="text-end">
+              {% if current %}
+              <form method="post" action="{{ url_for('budget_delete') }}"
+                    onsubmit="return confirm('予算を削除しますか？')">
+                <input type="hidden" name="year" value="{{ year }}">
+                <input type="hidden" name="type" value="{{ section_type }}">
+                <input type="hidden" name="category" value="{{ cat }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll('.period-radio').forEach(radio => {
+  radio.addEventListener('change', function() {
+    const cat = this.dataset.cat;
+    const singleWrap = document.getElementById('single_' + cat);
+    const monthlyWrap = document.getElementById('monthly_' + cat);
+    if (this.value === 'monthly_variable') {
+      singleWrap.classList.add('d-none');
+      monthlyWrap.classList.remove('d-none');
+    } else {
+      singleWrap.classList.remove('d-none');
+      monthlyWrap.classList.add('d-none');
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -71,20 +71,95 @@ def summary():
     if month not in months:
         months.insert(0, month)
 
+    year = int(month[:4])
     monthly = db.get_monthly_summary()
     category_data = db.get_category_summary(month=month)
 
     income_cats = {d["category"]: d["total"] for d in category_data if d["type"] == "income"}
     expense_cats = {d["category"]: d["total"] for d in category_data if d["type"] == "expense"}
 
+    # 月予算 vs 実績
+    def build_budget_rows(cats, type_):
+        rows = []
+        for cat, actual in cats.items():
+            budget = db.get_monthly_budget(year, month, type_, cat)
+            rows.append({"category": cat, "actual": actual, "budget": budget})
+        return rows
+
+    income_budget_rows = build_budget_rows(income_cats, "income")
+    expense_budget_rows = build_budget_rows(expense_cats, "expense")
+
+    # 年間サマリー（全カテゴリ）
+    all_categories = {
+        "income": db.INCOME_CATEGORIES,
+        "expense": db.EXPENSE_CATEGORIES,
+    }
+    yearly_rows = {"income": [], "expense": []}
+    for type_, cats in all_categories.items():
+        for cat in cats:
+            budget = db.get_yearly_budget(year, type_, cat)
+            actual = db.get_yearly_actual(year, type_, cat)
+            if budget is not None or actual > 0:
+                yearly_rows[type_].append({"category": cat, "actual": actual, "budget": budget})
+
     return render_template(
         "summary.html",
         month=month,
+        year=year,
         months=months,
         monthly=monthly,
         income_cats=income_cats,
         expense_cats=expense_cats,
+        income_budget_rows=income_budget_rows,
+        expense_budget_rows=expense_budget_rows,
+        yearly_rows=yearly_rows,
     )
+
+
+@app.route("/budget")
+def budget():
+    year = int(request.args.get("year", datetime.now().year))
+    years = list(range(datetime.now().year + 1, datetime.now().year - 3, -1))
+    budgets = db.get_budgets(year)
+    months_list = [f"{year}-{m:02d}" for m in range(1, 13)]
+    return render_template(
+        "budget.html",
+        year=year,
+        years=years,
+        budgets=budgets,
+        income_categories=db.INCOME_CATEGORIES,
+        expense_categories=db.EXPENSE_CATEGORIES,
+        months_list=months_list,
+    )
+
+
+@app.route("/budget/save", methods=["POST"])
+def budget_save():
+    year = int(request.form["year"])
+    type_ = request.form["type"]
+    category = request.form["category"]
+    period_type = request.form["period_type"]
+
+    if period_type == "monthly_variable":
+        months_list = [f"{year}-{m:02d}" for m in range(1, 13)]
+        for m in months_list:
+            raw = request.form.get(f"amount_{m}", "").strip()
+            if raw:
+                db.upsert_budget(year, type_, category, period_type, int(raw), month=m)
+    else:
+        amount = int(request.form["amount"])
+        db.upsert_budget(year, type_, category, period_type, amount)
+
+    return redirect(url_for("budget", year=year))
+
+
+@app.route("/budget/delete", methods=["POST"])
+def budget_delete():
+    year = int(request.form["year"])
+    type_ = request.form["type"]
+    category = request.form["category"]
+    db.delete_budget(year, type_, category)
+    return redirect(url_for("budget", year=year))
 
 
 @app.route("/export")
