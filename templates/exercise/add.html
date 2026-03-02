@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-primary text-white fw-bold">
+        <i class="bi bi-plus-circle"></i> 運動を記録
+      </div>
+      <div class="card-body">
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">日付</label>
+            <input type="date" name="date" class="form-control" value="{{ today }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">種目</label>
+            <select name="type" class="form-select" required>
+              {% for t in exercise_types %}
+                <option value="{{ t }}">{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">時間（分）</label>
+            <div class="input-group">
+              <input type="number" name="duration" class="form-control" min="1" placeholder="30" required>
+              <span class="input-group-text">分</span>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col">
+              <label class="form-label fw-semibold">距離 <span class="text-muted small">(任意)</span></label>
+              <div class="input-group">
+                <input type="number" name="distance" class="form-control" step="0.1" min="0" placeholder="0.0">
+                <span class="input-group-text">km</span>
+              </div>
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold">消費カロリー <span class="text-muted small">(任意)</span></label>
+              <div class="input-group">
+                <input type="number" name="calories" class="form-control" min="0" placeholder="0">
+                <span class="input-group-text">kcal</span>
+              </div>
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">メモ <span class="text-muted small">(任意)</span></label>
+            <input type="text" name="memo" class="form-control" maxlength="200">
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1">
+              <i class="bi bi-check-lg"></i> 登録
+            </button>
+            <a href="{{ url_for('exercise.index') }}" class="btn btn-outline-secondary">キャンセル</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

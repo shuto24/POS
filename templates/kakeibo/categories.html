@@ -33,7 +33,7 @@
           <td class="text-end">
             {% if not cat.is_preset %}
               {% if cat.tx_count == 0 %}
-                <form method="post" action="{{ url_for('categories_delete') }}"
+                <form method="post" action="{{ url_for('kakeibo.categories_delete') }}"
                       onsubmit="return confirm('「{{ cat.name }}」を削除しますか？')">
                   <input type="hidden" name="type" value="{{ section_type }}">
                   <input type="hidden" name="name" value="{{ cat.name }}">
@@ -56,7 +56,7 @@
   </div>
   <!-- 追加フォーム -->
   <div class="card-footer bg-white">
-    <form method="post" action="{{ url_for('categories_add') }}" class="d-flex gap-2 align-items-center">
+    <form method="post" action="{{ url_for('kakeibo.categories_add') }}" class="d-flex gap-2 align-items-center">
       <input type="hidden" name="type" value="{{ section_type }}">
       <input type="text" name="name" class="form-control form-control-sm" style="width:200px"
              placeholder="新しいカテゴリ名" maxlength="20" required>

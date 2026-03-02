@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0 fw-bold"><i class="bi bi-book"></i> 読書管理</h4>
+  <div class="d-flex gap-2 align-items-center">
+    <form method="get" class="d-flex gap-2">
+      <select name="status" class="form-select form-select-sm" onchange="this.form.submit()" style="width:auto">
+        <option value="" {% if not status %}selected{% endif %}>すべて</option>
+        {% for val, label in statuses.items() %}
+          <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    <a href="{{ url_for('books.add') }}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus"></i> 追加
+    </a>
+  </div>
+</div>
+
+<!-- 統計バッジ -->
+<div class="d-flex gap-2 mb-3">
+  {% for val, label in statuses.items() %}
+  <a href="{{ url_for('books.index', status=val) }}"
+     class="badge text-decoration-none fs-6 {{ 'bg-primary' if status == val else 'bg-secondary' }}">
+    {{ label }}
+  </a>
+  {% endfor %}
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    {% if books %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>タイトル</th>
+            <th>著者</th>
+            <th>状態</th>
+            <th>評価</th>
+            <th>読了日</th>
+            <th>メモ</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in books %}
+          {% set status_labels = {'unread': ('積読', 'secondary'), 'reading': ('読書中', 'primary'), 'done': ('読了', 'success')} %}
+          {% set sl = status_labels[b.status] %}
+          <tr>
+            <td class="fw-semibold">{{ b.title }}</td>
+            <td class="text-muted small">{{ b.author or '—' }}</td>
+            <td><span class="badge bg-{{ sl[1] }}">{{ sl[0] }}</span></td>
+            <td>
+              {% if b.rating %}
+                {% for i in range(1,6) %}
+                  <i class="bi bi-star{{ '-fill' if i <= b.rating else '' }} text-warning" style="font-size:.8rem"></i>
+                {% endfor %}
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-muted small">{{ b.end_date or '—' }}</td>
+            <td class="text-muted small">{{ (b.memo or '')[:30] }}{{ '…' if b.memo and b.memo|length > 30 else '' }}</td>
+            <td class="text-end">
+              <form method="post" action="{{ url_for('books.delete', id_=b.id) }}"
+                    onsubmit="return confirm('削除しますか？')">
+                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-book fs-1 d-block mb-2"></i>
+      データがありません
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

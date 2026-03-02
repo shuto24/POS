@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0 fw-bold"><i class="bi bi-moon-stars"></i> 睡眠管理</h4>
+  <div class="d-flex gap-2 align-items-center">
+    <form method="get" class="d-flex gap-2">
+      <select name="month" class="form-select form-select-sm" onchange="this.form.submit()" style="width:auto">
+        {% for m in months %}
+          <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    <a href="{{ url_for('sleep_log.add') }}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus"></i> 追加
+    </a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="text-muted small">平均睡眠時間</div>
+      <div class="fs-4 fw-bold text-primary">
+        {% if avg_duration %}
+          {{ avg_duration // 60 }}h {{ avg_duration % 60 }}m
+        {% else %}—{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="text-muted small">平均睡眠の質</div>
+      <div class="fs-4 fw-bold text-warning">
+        {% if avg_quality %}{{ avg_quality }} / 5{% else %}—{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="text-muted small">記録件数</div>
+      <div class="fs-4 fw-bold text-success">{{ logs|length }} 件</div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    {% if logs %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>日付（起床日）</th>
+            <th>就寝</th>
+            <th>起床</th>
+            <th class="text-end">睡眠時間</th>
+            <th>品質</th>
+            <th>メモ</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in logs %}
+          {% set dur_h = l.duration_min // 60 if l.duration_min else 0 %}
+          {% set dur_m = l.duration_min % 60 if l.duration_min else 0 %}
+          <tr>
+            <td class="text-nowrap">{{ l.date }}</td>
+            <td>{{ l.sleep_time }}</td>
+            <td>{{ l.wake_time }}</td>
+            <td class="text-end fw-semibold">
+              {% if l.duration_min %}{{ dur_h }}h{{ dur_m }}m{% else %}—{% endif %}
+            </td>
+            <td>
+              {% if l.quality %}
+                {% for i in range(1,6) %}
+                  <i class="bi bi-star{{ '-fill' if i <= l.quality else '' }} text-warning" style="font-size:.8rem"></i>
+                {% endfor %}
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-muted small">{{ l.memo or '' }}</td>
+            <td class="text-end">
+              <form method="post" action="{{ url_for('sleep_log.delete', id_=l.id) }}"
+                    onsubmit="return confirm('削除しますか？')">
+                <input type="hidden" name="month" value="{{ month }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-moon-stars fs-1 d-block mb-2"></i>
+      この月の記録がありません
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

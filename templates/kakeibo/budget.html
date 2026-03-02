@@ -35,7 +35,7 @@
           <tr>
             <td class="fw-semibold">{{ cat }}</td>
             <td colspan="2">
-              <form method="post" action="{{ url_for('budget_save') }}" class="budget-form">
+              <form method="post" action="{{ url_for('kakeibo.budget_save') }}" class="budget-form">
                 <input type="hidden" name="year" value="{{ year }}">
                 <input type="hidden" name="type" value="{{ section_type }}">
                 <input type="hidden" name="category" value="{{ cat }}">
@@ -92,7 +92,7 @@
             </td>
             <td class="text-end">
               {% if current %}
-              <form method="post" action="{{ url_for('budget_delete') }}"
+              <form method="post" action="{{ url_for('kakeibo.budget_delete') }}"
                     onsubmit="return confirm('予算を削除しますか？')">
                 <input type="hidden" name="year" value="{{ year }}">
                 <input type="hidden" name="type" value="{{ section_type }}">

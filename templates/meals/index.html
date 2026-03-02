@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0 fw-bold"><i class="bi bi-egg-fried"></i> 食事管理</h4>
+  <div class="d-flex gap-2 align-items-center">
+    <form method="get" class="d-flex gap-2">
+      <select name="month" class="form-select form-select-sm" onchange="this.form.submit()" style="width:auto">
+        {% for m in months %}
+          <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    <a href="{{ url_for('meals.add') }}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus"></i> 追加
+    </a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="text-muted small">月間合計カロリー</div>
+      <div class="fs-4 fw-bold text-warning">{{ "{:,}".format(total_calories) }} kcal</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="text-muted small">記録件数</div>
+      <div class="fs-4 fw-bold text-primary">{{ meals|length }} 件</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="text-muted small">1日平均カロリー</div>
+      {% set days = meals | map(attribute='date') | list | unique | list | length %}
+      <div class="fs-4 fw-bold text-info">
+        {% if days > 0 and total_calories > 0 %}
+          {{ "{:,}".format((total_calories // days)) }} kcal
+        {% else %}—{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    {% if meals %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>日付</th>
+            <th>区分</th>
+            <th>内容</th>
+            <th class="text-end">カロリー</th>
+            <th>メモ</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set type_colors = {'朝食': 'warning', '昼食': 'success', '夕食': 'primary', '間食': 'secondary'} %}
+          {% for m in meals %}
+          <tr>
+            <td class="text-nowrap">{{ m.date }}</td>
+            <td><span class="badge bg-{{ type_colors.get(m.meal_type, 'secondary') }}">{{ m.meal_type }}</span></td>
+            <td class="fw-semibold">{{ m.content }}</td>
+            <td class="text-end text-muted">{{ "{:,} kcal".format(m.calories) if m.calories else '—' }}</td>
+            <td class="text-muted small">{{ m.memo or '' }}</td>
+            <td class="text-end">
+              <form method="post" action="{{ url_for('meals.delete', id_=m.id) }}"
+                    onsubmit="return confirm('削除しますか？')">
+                <input type="hidden" name="month" value="{{ month }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-egg-fried fs-1 d-block mb-2"></i>
+      この月の記録がありません
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

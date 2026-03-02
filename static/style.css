@@ -2,6 +2,61 @@ body {
   font-family: 'Helvetica Neue', Arial, sans-serif;
 }
 
+/* ── サイドバー ── */
+#sidebar {
+  width: 210px;
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.sidebar-brand {
+  display: block;
+  padding: 1rem 1.2rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+
+.sidebar-section-label {
+  padding: .55rem 1rem .2rem;
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: rgba(255,255,255,.45);
+  list-style: none;
+  margin-top: .25rem;
+}
+
+.sidebar-link {
+  color: rgba(255,255,255,.75) !important;
+  font-size: .875rem;
+  padding: .3rem 1rem;
+  border-radius: .375rem;
+}
+
+.sidebar-link:hover {
+  color: #fff !important;
+  background: rgba(255,255,255,.1);
+}
+
+.sidebar-link.active {
+  color: #fff !important;
+  background: rgba(255,255,255,.18);
+  font-weight: 600;
+}
+
+.sidebar-divider {
+  list-style: none;
+  border-top: 1px solid rgba(255,255,255,.08);
+  margin: .4rem .8rem;
+}
+
 .navbar-brand {
   font-size: 1.2rem;
   letter-spacing: 0.03em;

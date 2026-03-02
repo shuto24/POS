@@ -47,6 +47,56 @@ def init_db():
                 UNIQUE(type, name)
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS books (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                author TEXT,
+                status TEXT NOT NULL DEFAULT 'unread',
+                rating INTEGER,
+                total_pages INTEGER,
+                current_page INTEGER,
+                start_date TEXT,
+                end_date TEXT,
+                memo TEXT,
+                created_at TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS exercises (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL,
+                type TEXT NOT NULL,
+                duration INTEGER NOT NULL,
+                distance REAL,
+                calories INTEGER,
+                memo TEXT,
+                created_at TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS meals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL,
+                meal_type TEXT NOT NULL,
+                content TEXT NOT NULL,
+                calories INTEGER,
+                memo TEXT,
+                created_at TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS sleep_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL,
+                sleep_time TEXT NOT NULL,
+                wake_time TEXT NOT NULL,
+                duration_min INTEGER,
+                quality INTEGER,
+                memo TEXT,
+                created_at TEXT NOT NULL
+            )
+        """)
         # プリセットカテゴリを初期投入（既存なら無視）
         for i, name in enumerate(INCOME_CATEGORIES):
             conn.execute(
@@ -304,3 +354,152 @@ def get_available_months():
             ORDER BY month DESC
         """).fetchall()
     return [row["month"] for row in rows]
+
+
+# ── 読書管理 ──────────────────────────────────────────
+BOOK_STATUSES = {"unread": "積読", "reading": "読書中", "done": "読了"}
+
+def get_books(status=None):
+    with get_connection() as conn:
+        if status:
+            rows = conn.execute(
+                "SELECT * FROM books WHERE status=? ORDER BY created_at DESC", (status,)
+            ).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM books ORDER BY created_at DESC").fetchall()
+    return [dict(r) for r in rows]
+
+def add_book(title, author, status, rating, total_pages, start_date, end_date, memo):
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO books (title,author,status,rating,total_pages,start_date,end_date,memo,created_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?)",
+            (title, author, status, rating or None, total_pages or None,
+             start_date or None, end_date or None, memo,
+             datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+        )
+
+def update_book_status(id_, status, current_page=None, end_date=None):
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE books SET status=?, current_page=?, end_date=? WHERE id=?",
+            (status, current_page, end_date, id_),
+        )
+
+def delete_book(id_):
+    with get_connection() as conn:
+        conn.execute("DELETE FROM books WHERE id=?", (id_,))
+
+
+# ── 運動管理 ──────────────────────────────────────────
+EXERCISE_TYPES = ["ランニング", "ウォーキング", "筋トレ", "水泳", "サイクリング", "ヨガ", "ストレッチ", "その他"]
+
+def get_exercises(month=None):
+    with get_connection() as conn:
+        if month:
+            rows = conn.execute(
+                "SELECT * FROM exercises WHERE strftime('%Y-%m',date)=? ORDER BY date DESC, id DESC",
+                (month,),
+            ).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM exercises ORDER BY date DESC, id DESC").fetchall()
+    return [dict(r) for r in rows]
+
+def add_exercise(date, type_, duration, distance, calories, memo):
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO exercises (date,type,duration,distance,calories,memo,created_at) VALUES (?,?,?,?,?,?,?)",
+            (date, type_, duration, distance or None, calories or None, memo,
+             datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+        )
+
+def delete_exercise(id_):
+    with get_connection() as conn:
+        conn.execute("DELETE FROM exercises WHERE id=?", (id_,))
+
+def get_exercise_months():
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT strftime('%Y-%m',date) AS month FROM exercises ORDER BY month DESC"
+        ).fetchall()
+    return [r["month"] for r in rows]
+
+
+# ── 食事管理 ──────────────────────────────────────────
+MEAL_TYPES = ["朝食", "昼食", "夕食", "間食"]
+
+def get_meals(month=None):
+    with get_connection() as conn:
+        if month:
+            rows = conn.execute(
+                "SELECT * FROM meals WHERE strftime('%Y-%m',date)=? ORDER BY date DESC, id DESC",
+                (month,),
+            ).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM meals ORDER BY date DESC, id DESC").fetchall()
+    return [dict(r) for r in rows]
+
+def add_meal(date, meal_type, content, calories, memo):
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO meals (date,meal_type,content,calories,memo,created_at) VALUES (?,?,?,?,?,?)",
+            (date, meal_type, content, calories or None, memo,
+             datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+        )
+
+def delete_meal(id_):
+    with get_connection() as conn:
+        conn.execute("DELETE FROM meals WHERE id=?", (id_,))
+
+def get_meal_months():
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT strftime('%Y-%m',date) AS month FROM meals ORDER BY month DESC"
+        ).fetchall()
+    return [r["month"] for r in rows]
+
+
+# ── 睡眠管理 ──────────────────────────────────────────
+def _calc_duration(sleep_time, wake_time):
+    """HH:MM 2つから睡眠時間(分)を計算する。日跨ぎ対応。"""
+    try:
+        sh, sm = map(int, sleep_time.split(":"))
+        wh, wm = map(int, wake_time.split(":"))
+        total = wh * 60 + wm - (sh * 60 + sm)
+        if total <= 0:
+            total += 24 * 60
+        return total
+    except Exception:
+        return None
+
+def get_sleep_logs(month=None):
+    with get_connection() as conn:
+        if month:
+            rows = conn.execute(
+                "SELECT * FROM sleep_logs WHERE strftime('%Y-%m',date)=? ORDER BY date DESC, id DESC",
+                (month,),
+            ).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM sleep_logs ORDER BY date DESC, id DESC").fetchall()
+    return [dict(r) for r in rows]
+
+def add_sleep_log(date, sleep_time, wake_time, quality, memo):
+    duration = _calc_duration(sleep_time, wake_time)
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO sleep_logs (date,sleep_time,wake_time,duration_min,quality,memo,created_at)"
+            " VALUES (?,?,?,?,?,?,?)",
+            (date, sleep_time, wake_time, duration, quality or None, memo,
+             datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+        )
+
+def delete_sleep_log(id_):
+    with get_connection() as conn:
+        conn.execute("DELETE FROM sleep_logs WHERE id=?", (id_,))
+
+def get_sleep_months():
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT strftime('%Y-%m',date) AS month FROM sleep_logs ORDER BY month DESC"
+        ).fetchall()
+    return [r["month"] for r in rows]
