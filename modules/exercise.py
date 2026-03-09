@@ -34,19 +34,6 @@ def index():
     )
 
 
-@bp.route("/weight", methods=["POST"])
-def save_weight():
-    date_ = request.form.get("date", "").strip()
-    weight_kg = request.form.get("weight_kg", "").strip()
-    month = request.form.get("month", datetime.now().strftime("%Y-%m"))
-    if date_ and weight_kg:
-        try:
-            db.add_or_update_weight(date_, float(weight_kg))
-        except ValueError:
-            pass
-    return redirect(url_for("exercise.index", month=month))
-
-
 @bp.route("/add", methods=["GET", "POST"])
 def add():
     if request.method == "POST":
@@ -59,12 +46,6 @@ def add():
             calories=request.form.get("calories") or None,
             memo=request.form.get("memo", ""),
         )
-        weight_kg = request.form.get("weight_kg", "").strip()
-        if weight_kg:
-            try:
-                db.add_or_update_weight(date_, float(weight_kg))
-            except ValueError:
-                pass
         return redirect(url_for("exercise.index", month=date_[:7]))
 
     today = datetime.now().strftime("%Y-%m-%d")
