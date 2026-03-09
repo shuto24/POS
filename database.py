@@ -617,14 +617,42 @@ def get_sleep_logs(month=None, q=None):
     return [dict(r) for r in rows]
 
 def add_sleep_log(date, sleep_time, wake_time, quality, memo):
+    """同日のレコードがあれば上書き（upsert）する"""
+    duration = _calc_duration(sleep_time, wake_time)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_connection() as conn:
+        existing = conn.execute(
+            "SELECT id FROM sleep_logs WHERE date=?", (date,)
+        ).fetchone()
+        if existing:
+            conn.execute(
+                "UPDATE sleep_logs SET sleep_time=?,wake_time=?,duration_min=?,quality=?,memo=?"
+                " WHERE date=?",
+                (sleep_time, wake_time, duration, quality or None, memo, date),
+            )
+        else:
+            conn.execute(
+                "INSERT INTO sleep_logs (date,sleep_time,wake_time,duration_min,quality,memo,created_at)"
+                " VALUES (?,?,?,?,?,?,?)",
+                (date, sleep_time, wake_time, duration, quality or None, memo, now),
+            )
+
+
+def get_sleep_log(id_):
+    with get_connection() as conn:
+        row = conn.execute("SELECT * FROM sleep_logs WHERE id=?", (id_,)).fetchone()
+    return dict(row) if row else None
+
+
+def update_sleep_log(id_, sleep_time, wake_time, quality, memo):
     duration = _calc_duration(sleep_time, wake_time)
     with get_connection() as conn:
         conn.execute(
-            "INSERT INTO sleep_logs (date,sleep_time,wake_time,duration_min,quality,memo,created_at)"
-            " VALUES (?,?,?,?,?,?,?)",
-            (date, sleep_time, wake_time, duration, quality or None, memo,
-             datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            "UPDATE sleep_logs SET sleep_time=?,wake_time=?,duration_min=?,quality=?,memo=?"
+            " WHERE id=?",
+            (sleep_time, wake_time, duration, quality or None, memo, id_),
         )
+
 
 def delete_sleep_log(id_):
     with get_connection() as conn:

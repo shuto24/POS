@@ -2,19 +2,34 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h4 class="mb-0 fw-bold"><i class="bi bi-moon-stars"></i> 睡眠管理</h4>
-  <div class="d-flex gap-2 align-items-center">
-    <form method="get" class="d-flex gap-2">
+  <div class="d-flex gap-2 align-items-center flex-wrap">
+    <form method="get" class="d-flex gap-2 align-items-center">
       <select name="month" class="form-select form-select-sm" onchange="this.form.submit()" style="width:auto">
         {% for m in months %}
           <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
         {% endfor %}
       </select>
+      <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
+             placeholder="メモを検索..." style="width:160px">
+      <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
     </form>
+    <label class="btn btn-sm btn-outline-secondary mb-0" title="CSVインポート">
+      <i class="bi bi-upload"></i> Import
+      <form action="{{ url_for('sleep_log.import_csv') }}" method="post" enctype="multipart/form-data" style="display:none">
+        <input type="file" name="file" accept=".csv" onchange="this.form.submit()">
+      </form>
+    </label>
     <a href="{{ url_for('sleep_log.add') }}" class="btn btn-sm btn-primary">
       <i class="bi bi-plus"></i> 追加
     </a>
   </div>
 </div>
+{% if q %}
+<div class="alert alert-info py-2 mb-3">
+  <i class="bi bi-search"></i> 「{{ q }}」の検索結果: {{ logs|length }} 件
+  <a href="{{ url_for('sleep_log.index', month=month) }}" class="ms-2 text-decoration-none">✕ クリア</a>
+</div>
+{% endif %}
 
 <div class="row g-3 mb-4">
   <div class="col-md-4">
@@ -79,13 +94,19 @@
             </td>
             <td class="text-muted small">{{ l.memo or '' }}</td>
             <td class="text-end">
-              <form method="post" action="{{ url_for('sleep_log.delete', id_=l.id) }}"
-                    onsubmit="return confirm('削除しますか？')">
-                <input type="hidden" name="month" value="{{ month }}">
-                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </form>
+              <div class="d-flex gap-1 justify-content-end">
+                <a href="{{ url_for('sleep_log.edit', id_=l.id) }}"
+                   class="btn btn-sm btn-outline-secondary py-0 px-2">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <form method="post" action="{{ url_for('sleep_log.delete', id_=l.id) }}"
+                      onsubmit="return confirm('削除しますか？')">
+                  <input type="hidden" name="month" value="{{ month }}">
+                  <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
             </td>
           </tr>
           {% endfor %}
