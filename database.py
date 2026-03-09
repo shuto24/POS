@@ -81,10 +81,19 @@ def init_db():
                 meal_type TEXT NOT NULL,
                 content TEXT NOT NULL,
                 calories INTEGER,
+                protein REAL,
+                fat REAL,
+                carbs REAL,
                 memo TEXT,
                 created_at TEXT NOT NULL
             )
         """)
+        # 既存 DB への PFC カラム追加（マイグレーション）
+        for col in ("protein REAL", "fat REAL", "carbs REAL"):
+            try:
+                conn.execute(f"ALTER TABLE meals ADD COLUMN {col}")
+            except Exception:
+                pass
         conn.execute("""
             CREATE TABLE IF NOT EXISTS sleep_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -124,9 +133,17 @@ def init_db():
                 content_key TEXT PRIMARY KEY,
                 content TEXT NOT NULL,
                 calories INTEGER NOT NULL,
+                protein REAL,
+                fat REAL,
+                carbs REAL,
                 updated_at TEXT NOT NULL
             )
         """)
+        for col in ("protein REAL", "fat REAL", "carbs REAL"):
+            try:
+                conn.execute(f"ALTER TABLE meal_calorie_cache ADD COLUMN {col}")
+            except Exception:
+                pass
         conn.execute("""
             CREATE TABLE IF NOT EXISTS weight_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -514,12 +531,14 @@ def get_meals(month=None, q=None):
         ).fetchall()
     return [dict(r) for r in rows]
 
-def add_meal(date, meal_type, content, calories, memo):
+def add_meal(date, meal_type, content, calories, memo, protein=None, fat=None, carbs=None):
     with get_connection() as conn:
         conn.execute(
-            "INSERT INTO meals (date,meal_type,content,calories,memo,created_at) VALUES (?,?,?,?,?,?)",
-            (date, meal_type, content, calories or None, memo,
-             datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            "INSERT INTO meals (date,meal_type,content,calories,protein,fat,carbs,memo,created_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?)",
+            (date, meal_type, content, calories or None,
+             protein or None, fat or None, carbs or None,
+             memo, datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
         )
 
 def get_meal(id_):
@@ -528,11 +547,13 @@ def get_meal(id_):
     return dict(row) if row else None
 
 
-def update_meal(id_, date, meal_type, content, calories, memo):
+def update_meal(id_, date, meal_type, content, calories, memo, protein=None, fat=None, carbs=None):
     with get_connection() as conn:
         conn.execute(
-            "UPDATE meals SET date=?, meal_type=?, content=?, calories=?, memo=? WHERE id=?",
-            (date, meal_type, content, calories or None, memo, id_),
+            "UPDATE meals SET date=?, meal_type=?, content=?, calories=?,"
+            " protein=?, fat=?, carbs=?, memo=? WHERE id=?",
+            (date, meal_type, content, calories or None,
+             protein or None, fat or None, carbs or None, memo, id_),
         )
 
 
@@ -566,24 +587,36 @@ def get_calorie_hints():
     return {r["content_key"]: r["calories"] for r in rows}
 
 
-def get_cached_calories(content):
+def get_cached_nutrition(content):
     key = content.lower().strip()
     with get_connection() as conn:
         row = conn.execute(
-            "SELECT calories FROM meal_calorie_cache WHERE content_key = ?", (key,)
+            "SELECT calories, protein, fat, carbs FROM meal_calorie_cache WHERE content_key = ?",
+            (key,),
         ).fetchone()
-    return row["calories"] if row else None
+    return dict(row) if row else None
 
 
-def set_cached_calories(content, calories):
+def set_cached_nutrition(content, calories, protein=None, fat=None, carbs=None):
     key = content.lower().strip()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with get_connection() as conn:
         conn.execute(
-            "INSERT OR REPLACE INTO meal_calorie_cache (content_key, content, calories, updated_at)"
-            " VALUES (?,?,?,?)",
-            (key, content, calories, now),
+            "INSERT OR REPLACE INTO meal_calorie_cache"
+            " (content_key, content, calories, protein, fat, carbs, updated_at)"
+            " VALUES (?,?,?,?,?,?,?)",
+            (key, content, calories, protein, fat, carbs, now),
         )
+
+
+# 後方互換
+def get_cached_calories(content):
+    r = get_cached_nutrition(content)
+    return r["calories"] if r else None
+
+
+def set_cached_calories(content, calories):
+    set_cached_nutrition(content, calories)
 
 
 # ── 睡眠管理 ──────────────────────────────────────────

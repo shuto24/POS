@@ -1,53 +1,339 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card border-0 shadow-sm">
-      <div class="card-header bg-primary text-white fw-bold">
-        <i class="bi bi-plus-circle"></i> 食事を記録
-      </div>
-      <div class="card-body">
-        <form method="post">
-          <div class="mb-3">
-            <label class="form-label fw-semibold">日付</label>
-            <input type="date" name="date" class="form-control" value="{{ today }}" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">食事区分</label>
-            <div class="d-flex gap-3 flex-wrap">
-              {% for mt in meal_types %}
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="meal_type"
-                       id="mt_{{ mt }}" value="{{ mt }}" {% if loop.first %}checked{% endif %} required>
-                <label class="form-check-label" for="mt_{{ mt }}">{{ mt }}</label>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">内容</label>
-            <input type="text" name="content" class="form-control" placeholder="例: ご飯・味噌汁・焼き魚" required maxlength="200">
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">カロリー <span class="text-muted small">(任意)</span></label>
-            <div class="input-group">
-              <input type="number" name="calories" class="form-control" min="0" placeholder="0">
-              <span class="input-group-text">kcal</span>
-            </div>
-          </div>
-          <div class="mb-4">
-            <label class="form-label fw-semibold">メモ <span class="text-muted small">(任意)</span></label>
-            <input type="text" name="memo" class="form-control" maxlength="200">
-          </div>
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary flex-grow-1">
-              <i class="bi bi-check-lg"></i> 登録
-            </button>
-            <a href="{{ url_for('meals.index') }}" class="btn btn-outline-secondary">キャンセル</a>
-          </div>
-        </form>
+
+<!-- ── Header ── -->
+<div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:2rem; flex-wrap:wrap; gap:1rem">
+  <div>
+    <p style="font-size:.6rem; font-weight:700; letter-spacing:.2em; text-transform:uppercase;
+              color:var(--dim); margin-bottom:.5rem">Daily Log</p>
+    <h1 style="font-size:clamp(1.8rem,4vw,2.8rem); font-weight:700; letter-spacing:-.04em;
+               line-height:.95; margin:0; color:var(--text)">食事を記録</h1>
+  </div>
+  <a href="{{ url_for('meals.index') }}" class="chip" style="align-self:flex-end">← 一覧</a>
+</div>
+
+<datalist id="dish-suggestions">
+  {% for s in suggestions %}<option value="{{ s }}">{% endfor %}
+</datalist>
+
+<form method="post" style="max-width:720px">
+
+  <!-- Date + Meal Type -->
+  <div style="display:grid; grid-template-columns:auto 1fr; gap:1rem; margin-bottom:1.5rem">
+    <div style="display:flex; align-items:center; gap:.75rem; padding:.9rem 1.1rem;
+                background:var(--surface); border:1px solid var(--border)">
+      <label class="form-label" style="margin:0; white-space:nowrap; font-size:.72rem">日付</label>
+      <input type="date" name="date" class="form-control form-control-sm"
+             value="{{ today }}" required style="width:148px">
+    </div>
+    <div style="padding:.9rem 1.1rem; background:var(--surface); border:1px solid var(--border)">
+      <label class="form-label" style="font-size:.72rem; margin-bottom:.5rem; display:block">食事区分</label>
+      {% set colors = ['#FCD34D', '#4ade80', '#60a5fa', '#f472b6'] %}
+      <div style="display:flex; gap:5px">
+        {% for meal_type in meal_types %}
+        {% set color = colors[loop.index0 % 4] %}
+        <label style="cursor:pointer; user-select:none">
+          <input type="radio" name="meal_type" value="{{ meal_type }}"
+                 {% if loop.first %}checked{% endif %}
+                 class="meal-radio" style="display:none"
+                 data-color="{{ color }}"
+                 onchange="activateMealType(this)">
+          <span class="chip meal-chip"
+                style="font-size:.7rem; padding:.3rem .7rem;
+                       border-color:{{ color }}33; color:var(--dim); transition:all .15s">{{ meal_type }}</span>
+        </label>
+        {% endfor %}
       </div>
     </div>
   </div>
-</div>
+
+  <!-- Column headers -->
+  <div style="display:grid; grid-template-columns:1fr 72px 88px 60px 60px 60px 64px 20px;
+              gap:6px; padding:0 .25rem; margin-bottom:4px">
+    <span style="font-size:.65rem; color:var(--dim); letter-spacing:.08em; text-transform:uppercase">品目名</span>
+    <span style="font-size:.65rem; color:var(--dim); letter-spacing:.08em; text-transform:uppercase">数量</span>
+    <span style="font-size:.65rem; color:var(--dim); letter-spacing:.08em; text-transform:uppercase">カロリー</span>
+    <span style="font-size:.65rem; color:var(--dim); letter-spacing:.08em; text-transform:uppercase">P(g)</span>
+    <span style="font-size:.65rem; color:var(--dim); letter-spacing:.08em; text-transform:uppercase">F(g)</span>
+    <span style="font-size:.65rem; color:var(--dim); letter-spacing:.08em; text-transform:uppercase">C(g)</span>
+    <span></span>
+    <span></span>
+  </div>
+
+  <!-- Dish rows -->
+  <div id="dish-list" style="display:flex; flex-direction:column; gap:4px; margin-bottom:.6rem"></div>
+
+  <!-- Footer row -->
+  <div style="display:flex; align-items:center; gap:.75rem; margin-bottom:1.5rem; padding-top:.25rem">
+    <button type="button" onclick="addDish()"
+            class="chip" style="font-size:.7rem; color:var(--dim); border-style:dashed; padding:.3rem .8rem">
+      + 品目を追加
+    </button>
+    <button type="button" id="btn-estimate-all" onclick="estimateAll()"
+            class="chip" style="font-size:.7rem; border-color:var(--border); color:var(--text); padding:.3rem .8rem">
+      まとめてAI推定
+    </button>
+  </div>
+
+  <!-- Total -->
+  <div style="display:flex; align-items:baseline; gap:1.5rem; margin-bottom:1.75rem; flex-wrap:wrap;
+              padding:.75rem 1.1rem; background:var(--surface); border:1px solid var(--border)">
+    <div style="display:flex; align-items:baseline; gap:.5rem">
+      <span style="font-size:.65rem; color:var(--dim); letter-spacing:.1em; text-transform:uppercase">カロリー</span>
+      <span id="total-cal" style="font-size:1.6rem; font-weight:700; color:var(--accent); line-height:1">—</span>
+      <span style="font-size:.78rem; color:var(--dim)">kcal</span>
+    </div>
+    <div style="display:flex; align-items:baseline; gap:.5rem">
+      <span style="font-size:.65rem; color:var(--dim); letter-spacing:.08em; text-transform:uppercase">P</span>
+      <span id="total-p" style="font-size:1.1rem; font-weight:600; color:#60a5fa">—</span>
+      <span style="font-size:.7rem; color:var(--dim)">g</span>
+    </div>
+    <div style="display:flex; align-items:baseline; gap:.5rem">
+      <span style="font-size:.65rem; color:var(--dim); letter-spacing:.08em; text-transform:uppercase">F</span>
+      <span id="total-f" style="font-size:1.1rem; font-weight:600; color:#fb923c">—</span>
+      <span style="font-size:.7rem; color:var(--dim)">g</span>
+    </div>
+    <div style="display:flex; align-items:baseline; gap:.5rem">
+      <span style="font-size:.65rem; color:var(--dim); letter-spacing:.08em; text-transform:uppercase">C</span>
+      <span id="total-c" style="font-size:1.1rem; font-weight:600; color:#fcd34d">—</span>
+      <span style="font-size:.7rem; color:var(--dim)">g</span>
+    </div>
+    <span id="cache-badge" style="font-size:.6rem; color:var(--dim); display:none; margin-left:auto">キャッシュ使用</span>
+  </div>
+
+  <div style="display:flex; gap:.75rem">
+    <button type="submit" class="btn btn-primary btn-sm" style="min-width:110px">記録する</button>
+    <a href="{{ url_for('meals.index') }}" class="chip" style="padding:.35rem .85rem; font-size:.75rem">キャンセル</a>
+  </div>
+
+</form>
+
+{% endblock %}
+{% block scripts %}
+<script>
+const CALORIE_HINTS = {{ calorie_hints | tojson }};
+let dishCount = 0;
+let currentMealType = '{{ meal_types[0] }}';
+
+document.addEventListener('DOMContentLoaded', () => {
+  const firstRadio = document.querySelector('.meal-radio');
+  if (firstRadio) activateMealType(firstRadio);
+  addDish(); addDish(); addDish();
+});
+
+function activateMealType(radio) {
+  currentMealType = radio.value;
+  document.querySelectorAll('.meal-chip').forEach(chip => {
+    chip.style.color = 'var(--dim)';
+    chip.style.background = 'transparent';
+    chip.style.borderColor = chip.dataset && chip.dataset.parentColor
+      ? chip.dataset.parentColor + '33' : '';
+  });
+  const chip = radio.nextElementSibling;
+  const color = radio.dataset.color;
+  chip.style.color = color;
+  chip.style.background = color + '15';
+  chip.style.borderColor = color;
+}
+
+function addDish() {
+  const idx = dishCount++;
+  const row = document.createElement('div');
+  row.id = 'row_' + idx;
+  row.style.cssText = `
+    display:grid; grid-template-columns:1fr 72px 88px 60px 60px 60px 64px 20px;
+    gap:6px; align-items:center;
+    background:var(--surface); border:1px solid var(--border); padding:.55rem .75rem;
+  `;
+  row.innerHTML = `
+    <input type="text" name="content[]" id="content_${idx}"
+           class="form-control form-control-sm" placeholder="例: 白米" maxlength="200"
+           list="dish-suggestions"
+           oninput="calcTotal()"
+           onchange="autoFillCalories(${idx})">
+    <input type="text" name="qty[]" id="qty_${idx}"
+           class="form-control form-control-sm" placeholder="2杯" maxlength="20"
+           style="font-size:.78rem"
+           oninput="autoFillCalories(${idx})">
+    <div style="display:flex; align-items:center; gap:3px">
+      <input type="number" name="calories[]" id="calories_${idx}"
+             class="form-control form-control-sm" min="0" placeholder="—"
+             style="transition:border-color .3s; min-width:0" oninput="calcTotal()">
+      <span style="font-size:.6rem; color:var(--dim); flex-shrink:0">kcal</span>
+    </div>
+    <input type="number" name="protein[]" id="protein_${idx}"
+           class="form-control form-control-sm" min="0" step="0.1" placeholder="—"
+           oninput="calcTotal()">
+    <input type="number" name="fat[]" id="fat_${idx}"
+           class="form-control form-control-sm" min="0" step="0.1" placeholder="—"
+           oninput="calcTotal()">
+    <input type="number" name="carbs[]" id="carbs_${idx}"
+           class="form-control form-control-sm" min="0" step="0.1" placeholder="—"
+           oninput="calcTotal()">
+    <button type="button" onclick="estimate(this, ${idx})"
+            class="ai-btn"
+            style="background:none; border:1px solid var(--border); color:var(--dim);
+                   font-size:.6rem; padding:.3rem .4rem; cursor:pointer;
+                   white-space:nowrap; transition:all .15s; border-radius:2px; width:100%">
+      AI推定
+    </button>
+    <button type="button" onclick="removeRow(${idx})"
+            style="background:none; border:none; color:var(--dim); cursor:pointer;
+                   font-size:.8rem; padding:0; line-height:1">✕</button>
+  `;
+  document.getElementById('dish-list').appendChild(row);
+}
+
+function removeRow(idx) {
+  const el = document.getElementById('row_' + idx);
+  if (el) { el.remove(); calcTotal(); }
+}
+
+function calcTotal() {
+  let cal = 0, p = 0, f = 0, c = 0, hasCal = false, hasPFC = false;
+  document.querySelectorAll('input[name="calories[]"]').forEach(el => {
+    const v = parseInt(el.value, 10);
+    if (!isNaN(v) && v >= 0) { cal += v; hasCal = true; }
+  });
+  document.querySelectorAll('input[name="protein[]"]').forEach(el => {
+    const v = parseFloat(el.value);
+    if (!isNaN(v)) { p += v; hasPFC = true; }
+  });
+  document.querySelectorAll('input[name="fat[]"]').forEach(el => {
+    const v = parseFloat(el.value);
+    if (!isNaN(v)) { f += v; hasPFC = true; }
+  });
+  document.querySelectorAll('input[name="carbs[]"]').forEach(el => {
+    const v = parseFloat(el.value);
+    if (!isNaN(v)) { c += v; hasPFC = true; }
+  });
+  document.getElementById('total-cal').textContent = hasCal ? cal.toLocaleString() : '—';
+  document.getElementById('total-p').textContent = hasPFC ? p.toFixed(1) : '—';
+  document.getElementById('total-f').textContent = hasPFC ? f.toFixed(1) : '—';
+  document.getElementById('total-c').textContent = hasPFC ? c.toFixed(1) : '—';
+}
+
+function autoFillCalories(idx) {
+  const content = (document.getElementById('content_' + idx)?.value || '').trim();
+  const qty = (document.getElementById('qty_' + idx)?.value || '').trim();
+  const caloriesEl = document.getElementById('calories_' + idx);
+  if (!content || caloriesEl.value) return;
+
+  // content+qty の組み合わせで検索、なければ content のみで検索
+  const fullKey = qty ? `${content} ${qty}`.toLowerCase() : content.toLowerCase();
+  const baseKey = content.toLowerCase();
+  const hit = CALORIE_HINTS[fullKey] ?? CALORIE_HINTS[baseKey] ?? null;
+
+  if (hit != null) {
+    caloriesEl.value = hit;
+    caloriesEl.style.borderColor = '#60a5fa';
+    setTimeout(() => { caloriesEl.style.borderColor = ''; }, 1200);
+    calcTotal();
+    document.getElementById('cache-badge').style.display = '';
+  }
+}
+
+async function estimateAll() {
+  const allBtn = document.getElementById('btn-estimate-all');
+  const rows = Array.from(document.getElementById('dish-list').children);
+  const pending = [];
+
+  rows.forEach(row => {
+    const idx = row.id.replace('row_', '');
+    const contentEl  = document.getElementById('content_' + idx);
+    const caloriesEl = document.getElementById('calories_' + idx);
+    const aiBtn = row.querySelector('.ai-btn');
+    if (contentEl?.value.trim() && !caloriesEl?.value) {
+      pending.push({ btn: aiBtn, idx: parseInt(idx) });
+    }
+  });
+
+  if (!pending.length) return;
+
+  allBtn.disabled = true;
+  const orig = allBtn.textContent;
+  allBtn.textContent = `推定中 (0/${pending.length})`;
+
+  let done = 0;
+  await Promise.all(pending.map(async p => {
+    await estimate(p.btn, p.idx);
+    done++;
+    if (allBtn.disabled) allBtn.textContent = `推定中 (${done}/${pending.length})`;
+  }));
+
+  allBtn.disabled = false;
+  allBtn.textContent = orig;
+}
+
+async function estimate(btn, idx) {
+  const contentEl  = document.getElementById('content_' + idx);
+  const qtyEl      = document.getElementById('qty_' + idx);
+  const caloriesEl = document.getElementById('calories_' + idx);
+  const dishName   = contentEl.value.trim();
+  const qty        = qtyEl?.value.trim() || '';
+  const fullContent = qty ? `${dishName} ${qty}` : dishName;
+
+  if (!dishName) {
+    contentEl.focus();
+    contentEl.style.borderColor = '#f87171';
+    setTimeout(() => { contentEl.style.borderColor = ''; }, 1000);
+    return;
+  }
+
+  const origText  = btn.textContent;
+  const origColor = btn.style.color;
+  btn.disabled = true;
+  btn.textContent = '…';
+  btn.style.color = 'var(--dim)';
+
+  try {
+    const resp = await fetch('/meals/estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: fullContent, meal_type: currentMealType }),
+    });
+    const data = await resp.json();
+
+    if (data.calories != null && data.calories > 0) {
+      caloriesEl.value = data.calories;
+      caloriesEl.style.borderColor = data.cached ? '#60a5fa' : 'var(--accent)';
+      setTimeout(() => { caloriesEl.style.borderColor = ''; }, 1500);
+      // PFC 自動入力
+      if (data.protein != null) {
+        const pe = document.getElementById('protein_' + idx);
+        if (pe && !pe.value) pe.value = data.protein;
+      }
+      if (data.fat != null) {
+        const fe = document.getElementById('fat_' + idx);
+        if (fe && !fe.value) fe.value = data.fat;
+      }
+      if (data.carbs != null) {
+        const ce = document.getElementById('carbs_' + idx);
+        if (ce && !ce.value) ce.value = data.carbs;
+      }
+      if (data.cached) document.getElementById('cache-badge').style.display = '';
+      calcTotal();
+      btn.disabled = false;
+      btn.textContent = origText;
+      btn.style.color = origColor;
+    } else {
+      showErr(btn, data.error || '失敗', origText, origColor);
+    }
+  } catch (e) {
+    showErr(btn, 'エラー', origText, origColor);
+  }
+}
+
+function showErr(btn, msg, origText, origColor) {
+  btn.textContent = msg;
+  btn.style.color = '#f87171';
+  btn.style.fontSize = '.55rem';
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.textContent = origText;
+    btn.style.color = origColor;
+    btn.style.fontSize = '';
+  }, 2500);
+}
+</script>
 {% endblock %}
