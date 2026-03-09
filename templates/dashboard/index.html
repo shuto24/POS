@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ── Header ── -->
+<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:3rem">
+  <div>
+    <p style="font-size:.6rem; font-weight:700; letter-spacing:.2em; text-transform:uppercase;
+              color:var(--dim); margin-bottom:.5rem">Personal Operating System</p>
+    <h1 style="font-size:clamp(2rem,5vw,3.5rem); font-weight:700; letter-spacing:-.04em;
+               line-height:.95; margin:0; color:var(--text)">
+      Overview
+    </h1>
+    <p style="font-size:.75rem; color:var(--dim); margin:.7rem 0 0; letter-spacing:.04em">{{ label }}</p>
+  </div>
+
+  <div style="display:flex; flex-direction:column; align-items:flex-end; gap:.75rem; margin-top:.25rem">
+    <!-- Period toggle -->
+    <div class="period-toggle">
+      <a href="{{ url_for('dashboard.index', period='day') }}"   class="p-btn {{ 'active' if period=='day'   }}">Day</a>
+      <a href="{{ url_for('dashboard.index', period='week') }}"  class="p-btn {{ 'active' if period=='week'  }}">Week</a>
+      <a href="{{ url_for('dashboard.index', period='month') }}" class="p-btn {{ 'active' if period=='month' }}">Month</a>
+      <a href="{{ url_for('dashboard.index', period='year') }}"  class="p-btn {{ 'active' if period=='year'  }}">Year</a>
+    </div>
+
+    <!-- Date selector -->
+    {% if period == 'day' %}
+    <div style="display:flex; align-items:center; gap:8px">
+      <a href="{{ url_for('dashboard.index', period='day', day=prev_day) }}"
+         style="color:var(--dim); text-decoration:none; font-size:1rem; line-height:1; padding:2px 6px; border:1px solid var(--border)">‹</a>
+      <span style="font-size:.72rem; color:var(--dim); letter-spacing:.04em; min-width:110px; text-align:center">{{ label }}</span>
+      <a href="{{ url_for('dashboard.index', period='day', day=next_day) }}"
+         style="color:var(--dim); text-decoration:none; font-size:1rem; line-height:1; padding:2px 6px; border:1px solid var(--border)">›</a>
+    </div>
+
+    {% elif period == 'week' %}
+    <div style="display:flex; align-items:center; gap:8px">
+      <a href="{{ url_for('dashboard.index', period='week', week=prev_week) }}"
+         style="color:var(--dim); text-decoration:none; font-size:1rem; line-height:1; padding:2px 6px; border:1px solid var(--border)">‹</a>
+      <span style="font-size:.72rem; color:var(--dim); letter-spacing:.04em; min-width:110px; text-align:center">{{ label }}</span>
+      <a href="{{ url_for('dashboard.index', period='week', week=next_week) }}"
+         style="color:var(--dim); text-decoration:none; font-size:1rem; line-height:1; padding:2px 6px; border:1px solid var(--border)">›</a>
+    </div>
+
+    {% elif period == 'month' %}
+    <form method="get" style="margin:0">
+      <input type="hidden" name="period" value="month">
+      <select name="month" class="form-select form-select-sm" onchange="this.form.submit()" style="width:110px; font-size:.72rem">
+        {% for m in months %}
+          <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </form>
+
+    {% elif period == 'year' %}
+    <form method="get" style="margin:0">
+      <input type="hidden" name="period" value="year">
+      <select name="year" class="form-select form-select-sm" onchange="this.form.submit()" style="width:90px; font-size:.72rem">
+        {% for y in years %}
+          <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Key Metrics Bento ── -->
+<div class="bento bento-4" style="margin-bottom:8px">
+
+  <!-- Balance — wide -->
+  <div class="stat-cell span-2">
+    <div class="cell-label">Net Balance</div>
+    <div class="cell-bar" style="background:var(--accent)"></div>
+    <div class="cell-value" style="color:{{ 'var(--accent)' if stats.kakeibo.balance >= 0 else '#f87171' }}">
+      ¥{{ "{:,}".format(stats.kakeibo.balance) }}
+    </div>
+    <div class="cell-sub">
+      IN ¥{{ "{:,}".format(stats.kakeibo.income) }}
+      &nbsp;·&nbsp;
+      OUT ¥{{ "{:,}".format(stats.kakeibo.expense) }}
+    </div>
+  </div>
+
+  <!-- Sleep -->
+  {% set sh = stats.sleep.avg_min // 60 %}
+  {% set sm = stats.sleep.avg_min % 60 %}
+  <div class="stat-cell">
+    <div class="cell-label">Avg Sleep</div>
+    <div class="cell-bar" style="background:var(--s)"></div>
+    <div class="cell-value" style="color:var(--s)">
+      {% if stats.sleep.avg_min %}{{ sh }}h <span style="font-size:60%">{{ sm }}m</span>{% else %}—{% endif %}
+    </div>
+    <div class="cell-sub">
+      {{ stats.sleep.count }} nights
+    </div>
+  </div>
+
+  <!-- Exercise -->
+  {% set eh = stats.exercise.total_min // 60 %}
+  {% set em = stats.exercise.total_min % 60 %}
+  <div class="stat-cell">
+    <div class="cell-label">Exercise</div>
+    <div class="cell-bar" style="background:var(--e)"></div>
+    <div class="cell-value" style="color:var(--e)">
+      {{ eh }}h <span style="font-size:60%">{{ em }}m</span>
+    </div>
+    <div class="cell-sub">{{ stats.exercise.count }} sessions &nbsp;·&nbsp; {{ "{:,}".format(stats.exercise.total_cal) }} kcal</div>
+  </div>
+
+</div>
+
+<div class="bento bento-4" style="margin-bottom:8px">
+
+  <!-- Food — wide -->
+  <div class="stat-cell span-2">
+    <div class="cell-label">Food Intake</div>
+    <div class="cell-bar" style="background:var(--m)"></div>
+    <div class="cell-value" style="color:var(--m)">
+      {% if stats.meals.avg_cal %}
+        {{ "{:,}".format(stats.meals.avg_cal) }}
+        <span style="font-size:1rem; font-weight:400; letter-spacing:0"> kcal/day</span>
+      {% else %}
+        —
+      {% endif %}
+    </div>
+    <div class="cell-sub">Total {{ "{:,}".format(stats.meals.total_cal) }} kcal &nbsp;·&nbsp; {{ stats.meals.count }} meals</div>
+  </div>
+
+  <!-- Weight -->
+  <div class="stat-cell">
+    <div class="cell-label">Body Weight</div>
+    <div class="cell-bar" style="background:var(--r)"></div>
+    <div class="cell-value" style="color:var(--r)">
+      {% if latest_weight %}
+        {{ "%.1f"|format(latest_weight) }}
+        <span style="font-size:1rem; font-weight:400; letter-spacing:0"> kg</span>
+      {% else %}—{% endif %}
+    </div>
+    <div class="cell-sub">
+      <a href="{{ url_for('record.index') }}" style="color:var(--dim); text-decoration:none">Record で入力 →</a>
+    </div>
+  </div>
+
+  <!-- Books -->
+  <div class="stat-cell">
+    <div class="cell-label">Reading</div>
+    <div class="cell-bar" style="background:var(--b)"></div>
+    <div style="display:flex; gap:1.5rem; flex:1; align-items:flex-end">
+      <div>
+        <div class="cell-value" style="color:var(--b); font-size:2rem">{{ stats.books.done }}</div>
+        <div class="cell-sub" style="margin-top:.3rem">Done</div>
+      </div>
+      <div>
+        <div class="cell-value" style="color:var(--dim); font-size:2rem">{{ stats.books.reading }}</div>
+        <div class="cell-sub" style="margin-top:.3rem">Reading</div>
+      </div>
+      <div>
+        <div class="cell-value" style="color:var(--dim2); font-size:2rem">{{ stats.books.unread }}</div>
+        <div class="cell-sub" style="margin-top:.3rem">Backlog</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Today's Trash ── -->
+<div style="display:flex; align-items:center; gap:1rem; padding:1rem 1.4rem; margin-bottom:8px;
+            background:var(--surface); border:1px solid var(--border);">
+  <div style="font-size:.58rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase;
+              color:var(--dim); flex-shrink:0; min-width:90px">Today's Trash</div>
+  <div style="width:1px; height:20px; background:var(--border); flex-shrink:0"></div>
+  {% if today_no_collect %}
+    <span style="font-size:.72rem; font-weight:600; padding:3px 10px; border-radius:2px;
+                 background:rgba(248,113,113,.12); color:#f87171; border:1px solid rgba(248,113,113,.3);
+                 letter-spacing:.04em">収集なし</span>
+  {% elif today_trash %}
+    <div style="display:flex; gap:6px; flex-wrap:wrap">
+      {% for key in today_trash %}
+      {% set info = trash_types[key] %}
+      <span style="font-size:.68rem; font-weight:600; padding:3px 10px; border-radius:2px;
+                   background:{{ info.color }}18; color:{{ info.color }};
+                   border:1px solid {{ info.color }}35; letter-spacing:.03em">{{ info.label }}</span>
+      {% endfor %}
+    </div>
+  {% else %}
+    <span style="font-size:.72rem; color:var(--dim2)">収集なし</span>
+  {% endif %}
+  <a href="{{ url_for('garbage.index') }}" style="margin-left:auto; font-size:.6rem; color:var(--dim2);
+     text-decoration:none; letter-spacing:.06em; flex-shrink:0">カレンダー →</a>
+</div>
+
+<!-- ── Module Cards ── -->
+<div class="sec-label">Modules</div>
+
+<div class="bento bento-5" style="margin-bottom:8px">
+
+  <!-- Record -->
+  <div class="mod-cell span-2" style="flex-direction:row; align-items:center; gap:2rem; min-height:auto; padding:1.25rem 1.6rem">
+    <div style="flex:1">
+      <div class="mod-name" style="color:var(--r)">Daily Record</div>
+      <div class="mod-stat" style="color:var(--r); font-size:1rem; font-weight:500">体重・運動・食事をまとめて記録</div>
+    </div>
+    <a href="{{ url_for('record.index') }}" class="chip chip-primary" style="flex-shrink:0">今日の記録 →</a>
+  </div>
+
+  <!-- AI Report -->
+  <div class="mod-cell span-3" style="flex-direction:row; align-items:center; gap:2rem; min-height:auto; padding:1.25rem 1.6rem">
+    <div style="flex:1">
+      <div class="mod-name" style="color:var(--accent)">AI Weekly Report</div>
+      <div class="mod-stat" style="color:var(--accent); font-size:1rem; font-weight:500">先週のデータから振り返りレポートを生成</div>
+    </div>
+    <a href="{{ url_for('report.index') }}" class="chip chip-primary" style="flex-shrink:0">レポートを見る →</a>
+  </div>
+
+</div>
+
+<div class="bento bento-5">
+
+  <!-- Finance -->
+  <div class="mod-cell">
+    <div class="mod-name" style="color:var(--k)">Finance</div>
+    <div class="mod-stat" style="color:var(--k)">
+      ¥{{ "{:,}".format(stats.kakeibo.balance) }}
+    </div>
+    <div class="mod-sub">net balance</div>
+    <div class="mod-actions">
+      <a href="{{ url_for('kakeibo.index') }}" class="chip">View</a>
+      <a href="{{ url_for('kakeibo.summary') }}" class="chip">Chart</a>
+      <a href="{{ url_for('kakeibo.add') }}" class="chip chip-primary">+ Add</a>
+    </div>
+  </div>
+
+  <!-- Books -->
+  <div class="mod-cell">
+    <div class="mod-name" style="color:var(--b)">Books</div>
+    <div class="mod-stat" style="color:var(--b)">{{ stats.books.reading + stats.books.done }} 冊</div>
+    <div class="mod-sub">{{ stats.books.reading }} reading · {{ stats.books.done }} done</div>
+    <div class="mod-actions">
+      <a href="{{ url_for('books.index') }}" class="chip">View</a>
+      <a href="{{ url_for('books.add') }}" class="chip chip-primary">+ Add</a>
+    </div>
+  </div>
+
+  <!-- Exercise -->
+  <div class="mod-cell">
+    <div class="mod-name" style="color:var(--e)">Exercise</div>
+    {% set eh2 = stats.exercise.total_min // 60 %}
+    {% set em2 = stats.exercise.total_min % 60 %}
+    <div class="mod-stat" style="color:var(--e)">{{ eh2 }}h {{ em2 }}m</div>
+    <div class="mod-sub">{{ stats.exercise.count }} sessions</div>
+    <div class="mod-actions">
+      <a href="{{ url_for('exercise.index') }}" class="chip">View</a>
+      <a href="{{ url_for('exercise.add') }}" class="chip chip-primary">+ Add</a>
+    </div>
+  </div>
+
+  <!-- Food -->
+  <div class="mod-cell">
+    <div class="mod-name" style="color:var(--m)">Food</div>
+    <div class="mod-stat" style="color:var(--m)">
+      {% if stats.meals.avg_cal %}{{ "{:,}".format(stats.meals.avg_cal) }}<span style="font-size:.9rem"> kcal/day</span>{% else %}—{% endif %}
+    </div>
+    <div class="mod-sub">Total {{ "{:,}".format(stats.meals.total_cal) }} kcal · {{ stats.meals.count }} items</div>
+    <div class="mod-actions">
+      <a href="{{ url_for('meals.index') }}" class="chip">View</a>
+      <a href="{{ url_for('meals.add') }}" class="chip chip-primary">+ Add</a>
+    </div>
+  </div>
+
+  <!-- Sleep -->
+  <div class="mod-cell">
+    <div class="mod-name" style="color:var(--s)">Sleep</div>
+    {% set sh2 = stats.sleep.avg_min // 60 %}
+    {% set sm2 = stats.sleep.avg_min % 60 %}
+    <div class="mod-stat" style="color:var(--s)">
+      {% if stats.sleep.avg_min %}{{ sh2 }}h {{ sm2 }}m{% else %}—{% endif %}
+    </div>
+    <div class="mod-sub">avg · quality {{ stats.sleep.avg_quality or '—' }}/5</div>
+    <div class="mod-actions">
+      <a href="{{ url_for('sleep_log.index') }}" class="chip">View</a>
+      <a href="{{ url_for('sleep_log.add') }}" class="chip chip-primary">+ Add</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Year Charts ── -->
+{% if period == 'year' and stats.month_series %}
+<div class="sec-label" style="margin-top:2rem">Monthly Breakdown</div>
+
+<div class="bento bento-4">
+  <div class="stat-cell span-2" style="min-height:240px; padding:1.5rem">
+    <div class="cell-label">Finance — Income vs Expense</div>
+    <canvas id="cK" style="margin-top:.5rem"></canvas>
+  </div>
+  <div class="stat-cell" style="min-height:240px; padding:1.5rem">
+    <div class="cell-label">Exercise — Minutes</div>
+    <canvas id="cE" style="margin-top:.5rem"></canvas>
+  </div>
+  <div class="stat-cell" style="min-height:240px; padding:1.5rem">
+    <div class="cell-label">Food — kcal</div>
+    <canvas id="cM" style="margin-top:.5rem"></canvas>
+  </div>
+  <div class="stat-cell span-2" style="min-height:240px; padding:1.5rem">
+    <div class="cell-label">Sleep — Avg Minutes</div>
+    <canvas id="cS" style="margin-top:.5rem"></canvas>
+  </div>
+</div>
+
+<script>
+const labels = {{ stats.month_series | map(attribute='month') | list | tojson }};
+const incomes  = {{ stats.month_series | map(attribute='income')   | list | tojson }};
+const expenses = {{ stats.month_series | map(attribute='expense')  | list | tojson }};
+const exMins   = {{ stats.month_series | map(attribute='ex_min')   | list | tojson }};
+const mealCals = {{ stats.month_series | map(attribute='meal_cal') | list | tojson }};
+const sleepMin = {{ stats.month_series | map(attribute='sleep_min')| list | tojson }};
+
+const opts = {
+  responsive: true,
+  plugins: {
+    legend: { labels: { color: 'rgba(255,255,255,.3)', font: { size: 10, family: 'Space Grotesk' } } }
+  },
+  scales: {
+    x: { ticks: { color: 'rgba(255,255,255,.25)', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,.04)' } },
+    y: { ticks: { color: 'rgba(255,255,255,.25)', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,.04)' } }
+  }
+};
+
+new Chart('cK', { type:'bar', data: { labels, datasets: [
+  { label:'IN',  data:incomes,  backgroundColor:'rgba(170,255,0,.45)',  borderRadius:2 },
+  { label:'OUT', data:expenses, backgroundColor:'rgba(248,113,113,.4)', borderRadius:2 },
+]}, options: opts });
+
+new Chart('cE', { type:'bar', data: { labels, datasets: [
+  { label:'min', data:exMins, backgroundColor:'rgba(251,146,60,.55)', borderRadius:2 }
+]}, options: opts });
+
+new Chart('cM', { type:'bar', data: { labels, datasets: [
+  { label:'kcal', data:mealCals, backgroundColor:'rgba(252,211,77,.5)', borderRadius:2 }
+]}, options: opts });
+
+new Chart('cS', { type:'line', data: { labels, datasets: [
+  { label:'min', data:sleepMin,
+    borderColor:'rgba(94,234,212,.7)', backgroundColor:'rgba(94,234,212,.08)',
+    tension:0.4, fill:true, pointRadius:3, pointBackgroundColor:'rgba(94,234,212,.9)' }
+]}, options: opts });
+</script>
+{% endif %}
+
+{% endblock %}
