@@ -881,6 +881,48 @@ def get_dashboard_year(year: int) -> dict:
     return summary
 
 
+def get_weekly_detail(week_start: str) -> dict:
+    """週間の詳細データをAIレポート用に返す。"""
+    from datetime import date, timedelta
+    d = date.fromisoformat(week_start)
+    week_end = (d + timedelta(days=6)).isoformat()
+    with get_connection() as conn:
+        exercises = conn.execute(
+            "SELECT type, SUM(duration) AS total_min, SUM(calories) AS total_cal, COUNT(*) AS cnt"
+            " FROM exercises WHERE date BETWEEN ? AND ? GROUP BY type",
+            (week_start, week_end),
+        ).fetchall()
+        meals = conn.execute(
+            "SELECT date, meal_type, content, calories FROM meals"
+            " WHERE date BETWEEN ? AND ? ORDER BY date, meal_type",
+            (week_start, week_end),
+        ).fetchall()
+        sleeps = conn.execute(
+            "SELECT date, duration_min, quality FROM sleep_logs"
+            " WHERE date BETWEEN ? AND ? ORDER BY date",
+            (week_start, week_end),
+        ).fetchall()
+        weights = conn.execute(
+            "SELECT date, weight_kg FROM weight_logs"
+            " WHERE date BETWEEN ? AND ? ORDER BY date",
+            (week_start, week_end),
+        ).fetchall()
+        finance = conn.execute(
+            "SELECT type, SUM(amount) AS total FROM transactions"
+            " WHERE date BETWEEN ? AND ? GROUP BY type",
+            (week_start, week_end),
+        ).fetchall()
+    return {
+        "week_start": week_start,
+        "week_end": week_end,
+        "exercises": [dict(r) for r in exercises],
+        "meals": [dict(r) for r in meals],
+        "sleeps": [dict(r) for r in sleeps],
+        "weights": [dict(r) for r in weights],
+        "finance": {r["type"]: r["total"] for r in finance},
+    }
+
+
 # ── ユーザー管理 ──────────────────────────────────────────
 
 def get_user_by_id(id_):

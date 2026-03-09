@@ -1,148 +1,90 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-bs-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>POS - Personal Operating System</title>
+  <title>POS — Personal Operating System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
   <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
 </head>
 <body>
-<div class="d-flex" style="min-height:100vh">
 
-  <!-- サイドバー -->
-  <nav id="sidebar" class="d-flex flex-column flex-shrink-0 bg-dark text-white">
-    <a href="{{ url_for('root') }}" class="sidebar-brand text-white text-decoration-none">
-      <i class="bi bi-grid-3x3-gap-fill"></i> POS
-    </a>
+<!-- ── Navigation ── -->
+<nav class="top-nav">
+  <a href="{{ url_for('dashboard.index') }}" class="nav-brand">POS</a>
+  <span class="nav-sep">·</span>
 
-    <ul class="nav nav-pills flex-column mb-auto px-2">
-
-      <!-- 家計簿 -->
-      {% set k_active = (module == 'kakeibo') %}
-      <li class="sidebar-section-label">💰 家計簿</li>
-      <li class="nav-item">
-        <a href="{{ url_for('kakeibo.index') }}"
-           class="nav-link sidebar-link {{ 'active' if k_active and request.endpoint == 'kakeibo.index' else '' }}">
-          <i class="bi bi-list-ul"></i> 一覧
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="{{ url_for('kakeibo.add') }}"
-           class="nav-link sidebar-link {{ 'active' if k_active and request.endpoint == 'kakeibo.add' else '' }}">
-          <i class="bi bi-plus-circle"></i> 追加
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="{{ url_for('kakeibo.summary') }}"
-           class="nav-link sidebar-link {{ 'active' if k_active and request.endpoint == 'kakeibo.summary' else '' }}">
-          <i class="bi bi-bar-chart"></i> 集計
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="{{ url_for('kakeibo.budget') }}"
-           class="nav-link sidebar-link {{ 'active' if k_active and request.endpoint == 'kakeibo.budget' else '' }}">
-          <i class="bi bi-piggy-bank"></i> 予算
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="{{ url_for('kakeibo.categories') }}"
-           class="nav-link sidebar-link {{ 'active' if k_active and request.endpoint == 'kakeibo.categories' else '' }}">
-          <i class="bi bi-tag"></i> カテゴリ
-        </a>
-      </li>
-
-      <li class="sidebar-divider"></li>
-
-      <!-- 読書 -->
-      {% set b_active = (module == 'books') %}
-      <li class="sidebar-section-label">📚 読書</li>
-      <li class="nav-item">
-        <a href="{{ url_for('books.index') }}"
-           class="nav-link sidebar-link {{ 'active' if b_active and request.endpoint == 'books.index' else '' }}">
-          <i class="bi bi-book"></i> 一覧
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="{{ url_for('books.add') }}"
-           class="nav-link sidebar-link {{ 'active' if b_active and request.endpoint == 'books.add' else '' }}">
-          <i class="bi bi-plus-circle"></i> 追加
-        </a>
-      </li>
-
-      <li class="sidebar-divider"></li>
-
-      <!-- 運動 -->
-      {% set e_active = (module == 'exercise') %}
-      <li class="sidebar-section-label">🏃 運動</li>
-      <li class="nav-item">
-        <a href="{{ url_for('exercise.index') }}"
-           class="nav-link sidebar-link {{ 'active' if e_active and request.endpoint == 'exercise.index' else '' }}">
-          <i class="bi bi-activity"></i> 一覧
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="{{ url_for('exercise.add') }}"
-           class="nav-link sidebar-link {{ 'active' if e_active and request.endpoint == 'exercise.add' else '' }}">
-          <i class="bi bi-plus-circle"></i> 追加
-        </a>
-      </li>
-
-      <li class="sidebar-divider"></li>
-
-      <!-- 食事 -->
-      {% set m_active = (module == 'meals') %}
-      <li class="sidebar-section-label">🍱 食事</li>
-      <li class="nav-item">
-        <a href="{{ url_for('meals.index') }}"
-           class="nav-link sidebar-link {{ 'active' if m_active and request.endpoint == 'meals.index' else '' }}">
-          <i class="bi bi-egg-fried"></i> 一覧
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="{{ url_for('meals.add') }}"
-           class="nav-link sidebar-link {{ 'active' if m_active and request.endpoint == 'meals.add' else '' }}">
-          <i class="bi bi-plus-circle"></i> 追加
-        </a>
-      </li>
-
-      <li class="sidebar-divider"></li>
-
-      <!-- 睡眠 -->
-      {% set s_active = (module == 'sleep_log') %}
-      <li class="sidebar-section-label">😴 睡眠</li>
-      <li class="nav-item">
-        <a href="{{ url_for('sleep_log.index') }}"
-           class="nav-link sidebar-link {{ 'active' if s_active and request.endpoint == 'sleep_log.index' else '' }}">
-          <i class="bi bi-moon-stars"></i> 一覧
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="{{ url_for('sleep_log.add') }}"
-           class="nav-link sidebar-link {{ 'active' if s_active and request.endpoint == 'sleep_log.add' else '' }}">
-          <i class="bi bi-plus-circle"></i> 追加
-        </a>
-      </li>
-
-    </ul>
-  </nav>
-
-  <!-- メインコンテンツ -->
-  <div class="flex-grow-1 bg-light d-flex flex-column">
-    <div class="container-fluid p-4 flex-grow-1">
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
-        {% endfor %}
-      {% endwith %}
-      {% block content %}{% endblock %}
-    </div>
+  <div class="nav-links">
+    <a href="{{ url_for('dashboard.index') }}"
+       class="nav-module {{ 'active' if module == 'dashboard' else '' }}">Home</a>
+    <a href="{{ url_for('record.index') }}"
+       class="nav-module {{ 'active active-r' if module == 'record' else '' }}">Record</a>
+    <a href="{{ url_for('kakeibo.index') }}"
+       class="nav-module {{ 'active active-k' if module == 'kakeibo' else '' }}">Finance</a>
+    <a href="{{ url_for('books.index') }}"
+       class="nav-module {{ 'active active-b' if module == 'books' else '' }}">Books</a>
+    <a href="{{ url_for('exercise.index') }}"
+       class="nav-module {{ 'active active-e' if module == 'exercise' else '' }}">Exercise</a>
+    <a href="{{ url_for('meals.index') }}"
+       class="nav-module {{ 'active active-m' if module == 'meals' else '' }}">Food</a>
+    <a href="{{ url_for('sleep_log.index') }}"
+       class="nav-module {{ 'active active-s' if module == 'sleep_log' else '' }}">Sleep</a>
+    <a href="{{ url_for('garbage.index') }}"
+       class="nav-module {{ 'active active-g' if module == 'garbage' else '' }}">Trash</a>
+    <a href="{{ url_for('memo.index') }}"
+       class="nav-module {{ 'active active-n' if module == 'memo' else '' }}">Memo</a>
+    <a href="{{ url_for('report.index') }}"
+       class="nav-module {{ 'active' if module == 'report' else '' }}">Report</a>
   </div>
 
+  <div class="dropdown">
+    <button class="btn-qadd dropdown-toggle" data-bs-toggle="dropdown">+ New</button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li><a class="dropdown-item" href="{{ url_for('record.index') }}">今日の記録</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item" href="{{ url_for('kakeibo.add') }}">収支を記録</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('books.add') }}">本を追加</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('exercise.add') }}">運動を記録</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('meals.add') }}">食事を記録</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('sleep_log.add') }}">睡眠を記録</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item" href="{{ url_for('memo.add') }}">メモを追加</a></li>
+    </ul>
+  </div>
+
+  {% if current_user.is_authenticated %}
+  <div style="display:flex; align-items:center; gap:.6rem; margin-left:1rem; flex-shrink:0">
+    {% if current_user.avatar_url %}
+    <img src="{{ current_user.avatar_url }}" alt=""
+         style="width:24px; height:24px; border-radius:50%; object-fit:cover; opacity:.7">
+    {% endif %}
+    <span style="font-size:.72rem; color:var(--dim); letter-spacing:.03em; max-width:100px;
+                 white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ current_user.name }}</span>
+    <a href="{{ url_for('auth.logout') }}"
+       style="font-size:.65rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+              color:var(--dim2); text-decoration:none; border:1px solid var(--border);
+              padding:.25rem .6rem; transition:all .15s"
+       onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--dim2)'">Logout</a>
+  </div>
+  {% endif %}
+</nav>
+
+<!-- ── Main ── -->
+<div class="main-content">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show mb-4">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:2rem; flex-wrap:wrap; gap:1rem">
+  <div>
+    <p style="font-size:.6rem; font-weight:700; letter-spacing:.2em; text-transform:uppercase;
+              color:var(--dim); margin-bottom:.5rem">AI Analysis</p>
+    <h1 style="font-size:clamp(1.8rem,4vw,2.8rem); font-weight:700; letter-spacing:-.04em;
+               line-height:.95; margin:0; color:var(--text)">週間レポート</h1>
+    <p style="font-size:.72rem; color:var(--dim); margin:.6rem 0 0; letter-spacing:.04em">{{ label }}</p>
+  </div>
+  <div style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap">
+    <a href="{{ url_for('report.index', week=prev_week) }}" class="chip">‹ 前週</a>
+    <a href="{{ url_for('report.index', week=next_week) }}" class="chip">次週 ›</a>
+    <a href="{{ url_for('report.index', week=week_start, generate='1') }}"
+       class="chip chip-primary" style="margin-left:.5rem">AI レポートを生成</a>
+  </div>
+</div>
+
+{% if error %}
+<div style="background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.3); color:#f87171;
+            padding:1rem 1.25rem; margin-bottom:1.5rem; font-size:.84rem">
+  エラー: {{ error }}
+</div>
+{% endif %}
+
+{% if report %}
+<!-- ── AI Report ── -->
+<div style="background:var(--surface); border:1px solid var(--accent); padding:2rem; margin-bottom:1.5rem">
+  <div style="font-size:.6rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase;
+              color:var(--accent); margin-bottom:1.25rem">AI Summary</div>
+  <p style="font-size:.95rem; line-height:1.7; color:var(--text); margin:0 0 1.5rem">{{ report.summary }}</p>
+
+  {% if report.insights %}
+  <div style="font-size:.6rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+              color:var(--dim); margin-bottom:.75rem">Insights</div>
+  <ul style="list-style:none; padding:0; margin:0 0 1.5rem; display:flex; flex-direction:column; gap:.5rem">
+    {% for item in report.insights %}
+    <li style="display:flex; gap:.75rem; font-size:.84rem; color:var(--text); line-height:1.55">
+      <span style="color:var(--accent); flex-shrink:0; margin-top:.1rem">◆</span>
+      {{ item }}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if report.advice %}
+  <div style="font-size:.6rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+              color:var(--dim); margin-bottom:.75rem">来週へのアドバイス</div>
+  <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:.5rem">
+    {% for item in report.advice %}
+    <li style="display:flex; gap:.75rem; font-size:.84rem; color:var(--text); line-height:1.55">
+      <span style="color:var(--r); flex-shrink:0; margin-top:.1rem">→</span>
+      {{ item }}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% else %}
+<div style="background:var(--surface); border:1px solid var(--border); padding:2.5rem;
+            text-align:center; margin-bottom:1.5rem">
+  <p style="font-size:.84rem; color:var(--dim); margin:0 0 1rem">
+    「AI レポートを生成」ボタンを押すと、この週のデータを分析して振り返りレポートを作成します。
+  </p>
+  <a href="{{ url_for('report.index', week=week_start, generate='1') }}" class="chip chip-primary">
+    AI レポートを生成
+  </a>
+</div>
+{% endif %}
+
+<!-- ── Weekly Data Summary ── -->
+<div class="sec-label">週間データ</div>
+
+<div class="bento bento-4" style="margin-bottom:1rem">
+
+  <!-- Exercise -->
+  <div class="stat-cell">
+    <div class="cell-label">Exercise</div>
+    <div class="cell-bar" style="background:var(--e)"></div>
+    {% set total_ex_min = data.exercises | sum(attribute='total_min') %}
+    <div class="cell-value" style="color:var(--e)">
+      {{ total_ex_min // 60 }}h <span style="font-size:60%">{{ total_ex_min % 60 }}m</span>
+    </div>
+    <div class="cell-sub">{{ data.exercises | sum(attribute='cnt') }} sessions</div>
+  </div>
+
+  <!-- Sleep -->
+  <div class="stat-cell">
+    <div class="cell-label">Avg Sleep</div>
+    <div class="cell-bar" style="background:var(--s)"></div>
+    {% if data.sleeps %}
+      {% set avg_sleep = (data.sleeps | sum(attribute='duration_min')) // (data.sleeps | length) %}
+      <div class="cell-value" style="color:var(--s)">
+        {{ avg_sleep // 60 }}h <span style="font-size:60%">{{ avg_sleep % 60 }}m</span>
+      </div>
+      <div class="cell-sub">{{ data.sleeps | length }} nights</div>
+    {% else %}
+      <div class="cell-value" style="color:var(--dim)">—</div>
+      <div class="cell-sub">記録なし</div>
+    {% endif %}
+  </div>
+
+  <!-- Weight -->
+  <div class="stat-cell">
+    <div class="cell-label">Weight</div>
+    <div class="cell-bar" style="background:var(--r)"></div>
+    {% if data.weights %}
+      <div class="cell-value" style="color:var(--r)">
+        {{ "%.1f"|format(data.weights[-1].weight_kg) }} <span style="font-size:60%">kg</span>
+      </div>
+      {% if data.weights | length >= 2 %}
+        {% set diff = data.weights[-1].weight_kg - data.weights[0].weight_kg %}
+        <div class="cell-sub" style="color:{{ '#4ade80' if diff <= 0 else '#f87171' }}">
+          {{ '%+.1f'|format(diff) }} kg 週間変動
+        </div>
+      {% else %}
+        <div class="cell-sub">記録 1件</div>
+      {% endif %}
+    {% else %}
+      <div class="cell-value" style="color:var(--dim)">—</div>
+      <div class="cell-sub">記録なし</div>
+    {% endif %}
+  </div>
+
+  <!-- Food -->
+  <div class="stat-cell">
+    <div class="cell-label">Food</div>
+    <div class="cell-bar" style="background:var(--m)"></div>
+    {% set total_cal = data.meals | sum(attribute='calories') %}
+    <div class="cell-value" style="color:var(--m)">
+      {% if total_cal %}
+        {{ "{:,}".format(total_cal) }} <span style="font-size:60%">kcal</span>
+      {% else %}—{% endif %}
+    </div>
+    <div class="cell-sub">{{ data.meals | length }} items</div>
+  </div>
+
+</div>
+
+<!-- Exercise breakdown -->
+{% if data.exercises %}
+<div style="background:var(--surface); border:1px solid var(--border); padding:1.5rem; margin-bottom:8px">
+  <div style="font-size:.6rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+              color:var(--dim); margin-bottom:.75rem">運動内訳</div>
+  <div style="display:flex; flex-wrap:wrap; gap:.5rem">
+    {% for e in data.exercises %}
+    <div style="background:var(--s2); border:1px solid var(--border); padding:.5rem .85rem">
+      <span style="font-size:.78rem; font-weight:600; color:var(--e)">{{ e.type }}</span>
+      <span style="font-size:.7rem; color:var(--dim); margin-left:.5rem">
+        {{ e.total_min }}分 · {{ e.cnt }}回
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Sleep breakdown -->
+{% if data.sleeps %}
+<div style="background:var(--surface); border:1px solid var(--border); padding:1.5rem; margin-bottom:8px">
+  <div style="font-size:.6rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+              color:var(--dim); margin-bottom:.75rem">睡眠ログ</div>
+  <div style="display:flex; flex-wrap:wrap; gap:.5rem">
+    {% for s in data.sleeps %}
+    <div style="background:var(--s2); border:1px solid var(--border); padding:.5rem .85rem">
+      <span style="font-size:.7rem; color:var(--dim)">{{ s.date }}</span>
+      <span style="font-size:.78rem; font-weight:600; color:var(--s); margin-left:.5rem">
+        {% if s.duration_min %}{{ s.duration_min // 60 }}h{{ s.duration_min % 60 }}m{% else %}—{% endif %}
+      </span>
+      {% if s.quality %}
+      <span style="font-size:.68rem; color:var(--dim); margin-left:.35rem">★{{ s.quality }}</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
